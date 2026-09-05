@@ -2,8 +2,12 @@ const apiUrl = '/api/pontos';
 const statusElement = document.getElementById('status');
 const totalPointsElement = document.getElementById('total-pontos');
 const mapMessageElement = document.getElementById('map-message');
+const cadastroModal = document.getElementById('cadastro-modal');
+const cadastroForm = document.getElementById('cadastro-form');
+const formStatusElement = document.getElementById('form-status');
 const saoPauloCenter = [-23.5505, -46.6333];
 const map = L.map('map').setView(saoPauloCenter, 11);
+const markerLayer = L.layerGroup().addTo(map);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -13,8 +17,129 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 const markerColors = {
   GRATUITA: '#2e9d68',
   COMPRA: '#2779bd',
-  DISTRIBUICAO: '#d8972e'
+  DISTRIBUICAO: '#d8972e',
+  NECESSIDADE: '#c44d43'
 };
+
+function atualizarTamanhoMapa() {
+  map.invalidateSize({
+    pan: false,
+    debounceMoveend: true
+  });
+}
+
+requestAnimationFrame(atualizarTamanhoMapa);
+window.addEventListener('load', atualizarTamanhoMapa);
+window.addEventListener('resize', atualizarTamanhoMapa);
+
+document.getElementById('cadastrar-ponto').addEventListener('click', abrirCadastro);
+document.querySelectorAll('[data-fechar-modal]').forEach((elemento) => {
+  elemento.addEventListener('click', fecharCadastro);
+});
+cadastroForm.addEventListener('submit', enviarCadastro);
+
+function abrirCadastro() {
+  formStatusElement.textContent = '';
+  formStatusElement.classList.remove('success');
+  cadastroModal.hidden = false;
+  cadastroForm.elements.nome.focus();
+}
+
+function fecharCadastro() {
+  cadastroModal.hidden = true;
+}
+
+async function enviarCadastro(evento) {
+  evento.preventDefault();
+  formStatusElement.classList.remove('success');
+
+  const dados = new FormData(cadastroForm);
+  const payload = {
+    nome: dados.get('nome').trim(),
+    descricao: dados.get('descricao').trim() || null,
+    tipo: dados.get('tipo'),
+    endereco: dados.get('endereco').trim(),
+    latitude: Number(dados.get('latitude')),
+    longitude: Number(dados.get('longitude')),
+    horarioInicio: dados.get('horarioInicio'),
+    horarioFim: dados.get('horarioFim'),
+    disponibilidade: dados.get('disponibilidade'),
+    observacao: dados.get('observacao').trim() || null
+  };
+
+  const erro = validarCadastro(payload);
+  if (erro) {
+    formStatusElement.textContent = erro;
+    return;
+  }
+
+  formStatusElement.textContent = 'Enviando cadastro...';
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const mensagem = await obterMensagemErro(response);
+      throw new Error(mensagem);
+    }
+
+    cadastroForm.reset();
+    fecharCadastro();
+    statusElement.classList.remove('error');
+    statusElement.textContent = 'Ponto cadastrado com sucesso. Aguardando aprovação.';
+    await carregarPontos();
+  } catch (error) {
+    console.error(error);
+    formStatusElement.textContent = error.message || 'Não foi possível cadastrar o ponto.';
+  }
+}
+
+function validarCadastro(payload) {
+  const camposObrigatorios = [
+    ['nome', 'Nome'],
+    ['tipo', 'Tipo'],
+    ['endereco', 'Endereço'],
+    ['horarioInicio', 'Horário inicial'],
+    ['horarioFim', 'Horário final'],
+    ['disponibilidade', 'Disponibilidade']
+  ];
+
+  for (const [campo, nome] of camposObrigatorios) {
+    if (!payload[campo]) {
+      return `${nome} é obrigatório.`;
+    }
+  }
+
+  if (!Number.isFinite(payload.latitude) || payload.latitude < -90 || payload.latitude > 90) {
+    return 'Latitude deve estar entre -90 e 90.';
+  }
+
+  if (!Number.isFinite(payload.longitude) || payload.longitude < -180 || payload.longitude > 180) {
+    return 'Longitude deve estar entre -180 e 180.';
+  }
+
+  if (payload.horarioFim < payload.horarioInicio) {
+    return 'Horário final não pode ser anterior ao horário inicial.';
+  }
+
+  return '';
+}
+
+async function obterMensagemErro(response) {
+  try {
+    const corpo = await response.json();
+    return corpo.message || corpo.error || `Não foi possível cadastrar o ponto (${response.status}).`;
+  } catch (error) {
+    return `Não foi possível cadastrar o ponto (${response.status}).`;
+  }
+}
 
 async function carregarPontos() {
   statusElement.textContent = 'Carregando pontos...';
@@ -37,6 +162,7 @@ async function carregarPontos() {
       totalPointsElement.textContent = '0 pontos';
       statusElement.textContent = 'Nenhum ponto encontrado.';
       mostrarMensagem('Nenhum ponto de água cadastrado na API.');
+      atualizarTamanhoMapa();
       return;
     }
 
@@ -44,6 +170,7 @@ async function carregarPontos() {
     const pontosValidos = pontosAprovados.filter((ponto) => possuiLocalizacaoValida(ponto));
     const pontosInvalidos = pontosAprovados.length - pontosValidos.length;
 
+    markerLayer.clearLayers();
     pontosValidos.forEach(adicionarMarcador);
     totalPointsElement.textContent = `${pontosValidos.length} ponto${pontosValidos.length === 1 ? '' : 's'}`;
 
@@ -52,6 +179,7 @@ async function carregarPontos() {
         ? 'Nenhum ponto aprovado para exibir.'
         : 'Nenhum ponto aprovado possui localização válida.';
       mostrarMensagem(statusElement.textContent);
+      atualizarTamanhoMapa();
       return;
     }
 
@@ -60,12 +188,14 @@ async function carregarPontos() {
       : 'Pontos aprovados carregados com sucesso.';
 
     ajustarMapa(pontosValidos);
+    atualizarTamanhoMapa();
   } catch (error) {
     console.error(error);
     statusElement.textContent = 'Não foi possível carregar os pontos da API.';
     statusElement.classList.add('error');
     mostrarMensagem('Verifique a comunicação com o backend e tente novamente.');
     totalPointsElement.textContent = '0 pontos';
+    atualizarTamanhoMapa();
   }
 }
 
@@ -90,7 +220,7 @@ function adicionarMarcador(ponto) {
   });
 
   L.marker([Number(ponto.latitude), Number(ponto.longitude)], { icon: icone })
-    .addTo(map)
+    .addTo(markerLayer)
     .bindPopup(criarPopup(ponto));
 }
 
