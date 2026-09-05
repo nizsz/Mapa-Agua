@@ -1,0 +1,10 @@
+D:\Projects-VSCODe\mapa-da-agua\src\main\java\com\mapaagua\controller\PontoAguaController.java
+D:\Projects-VSCODe\mapa-da-agua\src\main\java\com\mapaagua\dto\PontoAguaRequestDto.java
+D:\Projects-VSCODe\mapa-da-agua\src\main\java\com\mapaagua\dto\PontoAguaResponseDto.java
+D:\Projects-VSCODe\mapa-da-agua\src\main\java\com\mapaagua\entity\PontoAgua.java
+D:\Projects-VSCODe\mapa-da-agua\src\main\java\com\mapaagua\enums\DisponibilidadeAgua.java
+D:\Projects-VSCODe\mapa-da-agua\src\main\java\com\mapaagua\enums\StatusAprovacaoPonto.java
+D:\Projects-VSCODe\mapa-da-agua\src\main\java\com\mapaagua\enums\TipoPontoAgua.java
+D:\Projects-VSCODe\mapa-da-agua\src\main\java\com\mapaagua\MapaAguaApplication.java
+D:\Projects-VSCODe\mapa-da-agua\src\main\java\com\mapaagua\repository\PontoAguaRepository.java
+D:\Projects-VSCODe\mapa-da-agua\src\main\java\com\mapaagua\service\PontoAguaService.java

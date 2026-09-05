@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mapa da Água</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <h1>Mapa da Água</h1>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Pontos de água</h2>
+          <span id="total-pontos" class="badge">0 pontos</span>
+        </div>
+
+        <div id="status" class="status" aria-live="polite">
+          Carregando pontos...
+        </div>
+
+        <div id="pontos-container" class="points-grid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script src="/js/app.js"></script>
+  </body>
+</html>

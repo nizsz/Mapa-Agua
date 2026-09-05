@@ -1,0 +1,10 @@
+com\mapaagua\enums\StatusAprovacaoPonto.class
+com\mapaagua\controller\PontoAguaController.class
+com\mapaagua\dto\PontoAguaResponseDto.class
+com\mapaagua\entity\PontoAgua.class
+com\mapaagua\dto\PontoAguaRequestDto.class
+com\mapaagua\enums\TipoPontoAgua.class
+com\mapaagua\MapaAguaApplication.class
+com\mapaagua\repository\PontoAguaRepository.class
+com\mapaagua\service\PontoAguaService.class
+com\mapaagua\enums\DisponibilidadeAgua.class
