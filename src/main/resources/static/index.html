@@ -3,31 +3,64 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mapa da Água</title>
+    <title>Mapa da Água | Pontos de acesso</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQ3d6f8Nn0m6d5q8Yg5h6lK3n7Z6i6M="
+      crossorigin=""
+    />
     <link rel="stylesheet" href="/css/style.css" />
   </head>
   <body>
     <header class="topbar">
-      <div class="container">
-        <h1>Mapa da Água</h1>
+      <div class="container topbar-content">
+        <div>
+          <p class="eyebrow">Acesso à água potável</p>
+          <h1>Mapa da Água</h1>
+        </div>
+        <span class="live-label"><span class="live-dot"></span>Dados atualizados pela API</span>
       </div>
     </header>
 
     <main class="container">
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Pontos de água</h2>
-          <span id="total-pontos" class="badge">0 pontos</span>
+      <section class="intro-row">
+        <div>
+          <p class="section-kicker">Visão geral</p>
+          <h2>Encontre água perto de você</h2>
+          <p class="intro-copy">Explore os pontos aprovados e consulte as informações de atendimento diretamente no mapa.</p>
+        </div>
+        <span id="total-pontos" class="badge">0 pontos</span>
+      </section>
+
+      <section class="map-panel" aria-labelledby="map-title">
+        <div class="map-heading">
+          <div>
+            <p class="section-kicker">Mapa principal</p>
+            <h2 id="map-title">Pontos de acesso</h2>
+          </div>
+          <div class="legend" aria-label="Legenda dos tipos de ponto">
+            <span class="legend-item"><span class="legend-marker gratuita"></span>Gratuita</span>
+            <span class="legend-item"><span class="legend-marker compra"></span>Compra</span>
+            <span class="legend-item"><span class="legend-marker distribuicao"></span>Distribuição</span>
+          </div>
         </div>
 
-        <div id="status" class="status" aria-live="polite">
-          Carregando pontos...
-        </div>
-
-        <div id="pontos-container" class="points-grid" aria-live="polite"></div>
+        <div id="status" class="status" aria-live="polite">Carregando pontos...</div>
+        <div id="map" class="map" aria-label="Mapa com os pontos aprovados de acesso à água"></div>
+        <div id="map-message" class="map-message" aria-live="polite"></div>
       </section>
     </main>
 
+    <footer class="footer">
+      <div class="container">Mapa da Água · Informações de pontos aprovados</div>
+    </footer>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
     <script src="/js/app.js"></script>
   </body>
 </html>
