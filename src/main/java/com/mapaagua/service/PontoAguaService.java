@@ -59,6 +59,25 @@ public class PontoAguaService {
     }
 
     @Transactional
+    public PontoAguaResponseDto atualizarStatus(Long id, StatusAprovacaoPonto novoStatus) {
+        PontoAgua pontoAgua = buscarEntidadePorId(id);
+        StatusAprovacaoPonto statusAtual = pontoAgua.getStatusAprovacao();
+
+        if (novoStatus == null
+                || statusAtual != StatusAprovacaoPonto.PENDENTE
+                || (novoStatus != StatusAprovacaoPonto.APROVADO
+                && novoStatus != StatusAprovacaoPonto.REJEITADO)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Transição de status não permitida: " + statusAtual + " para " + novoStatus
+            );
+        }
+
+        pontoAgua.setStatusAprovacao(novoStatus);
+        return toResponseDto(pontoAguaRepository.save(pontoAgua));
+    }
+
+    @Transactional
     public void deletar(Long id) {
         if (!pontoAguaRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, PONTO_NAO_ENCONTRADO);
