@@ -48,6 +48,36 @@
           </div>
         </div>
 
+        <div class="filters" aria-label="Busca e filtros de pontos de água">
+          <label class="search-field">
+            <span>Buscar ponto de água</span>
+            <input id="busca-ponto" type="search" placeholder="Nome ou endereço" autocomplete="off" />
+          </label>
+
+          <label class="filter-field">
+            <span>Tipo</span>
+            <select id="filtro-tipo">
+              <option value="TODOS">Todos</option>
+              <option value="GRATUITA">Gratuita</option>
+              <option value="COMPRA">Compra</option>
+              <option value="DISTRIBUICAO">Distribuição</option>
+            </select>
+          </label>
+
+          <label class="filter-field">
+            <span>Disponibilidade</span>
+            <select id="filtro-disponibilidade">
+              <option value="TODAS">Todas</option>
+              <option value="ALTA">Alta</option>
+              <option value="MEDIA">Média</option>
+              <option value="BAIXA">Baixa</option>
+              <option value="INDISPONIVEL">Indisponível</option>
+            </select>
+          </label>
+
+          <button id="limpar-filtros" class="secondary-button filter-button" type="button">Limpar filtros</button>
+        </div>
+
         <div id="status" class="status" aria-live="polite">Carregando pontos...</div>
         <div id="map" class="map" aria-label="Mapa com os pontos aprovados de acesso à água"></div>
         <div id="map-message" class="map-message" aria-live="polite"></div>
