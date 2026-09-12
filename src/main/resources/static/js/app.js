@@ -5,9 +5,15 @@ const mapMessageElement = document.getElementById('map-message');
 const cadastroModal = document.getElementById('cadastro-modal');
 const cadastroForm = document.getElementById('cadastro-form');
 const formStatusElement = document.getElementById('form-status');
+const buscaElement = document.getElementById('busca-ponto');
+const filtroTipoElement = document.getElementById('filtro-tipo');
+const filtroDisponibilidadeElement = document.getElementById('filtro-disponibilidade');
+const limparFiltrosElement = document.getElementById('limpar-filtros');
 const saoPauloCenter = [-23.5505, -46.6333];
 const map = L.map('map').setView(saoPauloCenter, 11);
 const markerLayer = L.layerGroup().addTo(map);
+let pontosAprovados = [];
+let buscaTimeout;
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -37,6 +43,13 @@ document.querySelectorAll('[data-fechar-modal]').forEach((elemento) => {
   elemento.addEventListener('click', fecharCadastro);
 });
 cadastroForm.addEventListener('submit', enviarCadastro);
+buscaElement.addEventListener('input', () => {
+  window.clearTimeout(buscaTimeout);
+  buscaTimeout = window.setTimeout(aplicarFiltros, 250);
+});
+filtroTipoElement.addEventListener('change', aplicarFiltros);
+filtroDisponibilidadeElement.addEventListener('change', aplicarFiltros);
+limparFiltrosElement.addEventListener('click', limparFiltros);
 
 function abrirCadastro() {
   formStatusElement.textContent = '';
@@ -159,6 +172,8 @@ async function carregarPontos() {
     const pontos = await response.json();
 
     if (!Array.isArray(pontos) || pontos.length === 0) {
+      pontosAprovados = [];
+      markerLayer.clearLayers();
       totalPointsElement.textContent = '0 pontos';
       statusElement.textContent = 'Nenhum ponto encontrado.';
       mostrarMensagem('Nenhum ponto de água cadastrado na API.');
@@ -166,37 +181,62 @@ async function carregarPontos() {
       return;
     }
 
-    const pontosAprovados = pontos.filter((ponto) => ponto.statusAprovacao === 'APROVADO');
-    const pontosValidos = pontosAprovados.filter((ponto) => possuiLocalizacaoValida(ponto));
-    const pontosInvalidos = pontosAprovados.length - pontosValidos.length;
+    pontosAprovados = pontos
+      .filter((ponto) => ponto.statusAprovacao === 'APROVADO')
+      .filter((ponto) => possuiLocalizacaoValida(ponto));
 
-    markerLayer.clearLayers();
-    pontosValidos.forEach(adicionarMarcador);
-    totalPointsElement.textContent = `${pontosValidos.length} ponto${pontosValidos.length === 1 ? '' : 's'}`;
-
-    if (pontosValidos.length === 0) {
-      statusElement.textContent = pontosAprovados.length === 0
-        ? 'Nenhum ponto aprovado para exibir.'
-        : 'Nenhum ponto aprovado possui localização válida.';
-      mostrarMensagem(statusElement.textContent);
-      atualizarTamanhoMapa();
-      return;
-    }
-
-    statusElement.textContent = pontosInvalidos > 0
-      ? `${pontosValidos.length} ponto${pontosValidos.length === 1 ? '' : 's'} exibido${pontosValidos.length === 1 ? '' : 's'}; ${pontosInvalidos} com localização inválida.`
-      : 'Pontos aprovados carregados com sucesso.';
-
-    ajustarMapa(pontosValidos);
-    atualizarTamanhoMapa();
+    aplicarFiltros();
   } catch (error) {
     console.error(error);
+    pontosAprovados = [];
+    markerLayer.clearLayers();
     statusElement.textContent = 'Não foi possível carregar os pontos da API.';
     statusElement.classList.add('error');
     mostrarMensagem('Verifique a comunicação com o backend e tente novamente.');
     totalPointsElement.textContent = '0 pontos';
     atualizarTamanhoMapa();
   }
+}
+
+function aplicarFiltros() {
+  const termo = buscaElement.value.trim().toLocaleLowerCase('pt-BR');
+  const tipoSelecionado = filtroTipoElement.value;
+  const disponibilidadeSelecionada = filtroDisponibilidadeElement.value;
+  const pontosFiltrados = pontosAprovados.filter((ponto) => {
+    const nome = String(ponto.nome || '').toLocaleLowerCase('pt-BR');
+    const endereco = String(ponto.endereco || '').toLocaleLowerCase('pt-BR');
+    const correspondeBusca = !termo || nome.includes(termo) || endereco.includes(termo);
+    const correspondeTipo = tipoSelecionado === 'TODOS' || ponto.tipo === tipoSelecionado;
+    const correspondeDisponibilidade = disponibilidadeSelecionada === 'TODAS'
+      || ponto.disponibilidade === disponibilidadeSelecionada;
+
+    return correspondeBusca && correspondeTipo && correspondeDisponibilidade;
+  });
+
+  markerLayer.clearLayers();
+  pontosFiltrados.forEach(adicionarMarcador);
+  totalPointsElement.textContent = `${pontosFiltrados.length} ponto${pontosFiltrados.length === 1 ? '' : 's'}`;
+  esconderMensagem();
+
+  if (pontosFiltrados.length === 0) {
+    statusElement.textContent = 'Nenhum ponto de água encontrado.';
+    mostrarMensagem('Nenhum ponto de água encontrado.');
+    atualizarTamanhoMapa();
+    return;
+  }
+
+  statusElement.classList.remove('error');
+  statusElement.textContent = 'Pontos aprovados carregados com sucesso.';
+  ajustarMapa(pontosFiltrados);
+  atualizarTamanhoMapa();
+}
+
+function limparFiltros() {
+  window.clearTimeout(buscaTimeout);
+  buscaElement.value = '';
+  filtroTipoElement.value = 'TODOS';
+  filtroDisponibilidadeElement.value = 'TODAS';
+  aplicarFiltros();
 }
 
 function possuiLocalizacaoValida(ponto) {
@@ -239,17 +279,22 @@ function criarPopup(ponto) {
 
 function ajustarMapa(pontos) {
   if (pontos.length === 1) {
-    map.setView([Number(pontos[0].latitude), Number(pontos[0].longitude)], 15);
+    map.setView([Number(pontos[0].latitude), Number(pontos[0].longitude)], 15, { animate: false });
     return;
   }
 
   const limites = L.latLngBounds(pontos.map((ponto) => [Number(ponto.latitude), Number(ponto.longitude)]));
-  map.fitBounds(limites, { padding: [36, 36], maxZoom: 15 });
+  map.fitBounds(limites, { padding: [36, 36], maxZoom: 15, animate: false });
 }
 
 function mostrarMensagem(mensagem) {
   mapMessageElement.textContent = mensagem;
   mapMessageElement.classList.add('visible');
+}
+
+function esconderMensagem() {
+  mapMessageElement.textContent = '';
+  mapMessageElement.classList.remove('visible');
 }
 
 function escaparHtml(valor) {
