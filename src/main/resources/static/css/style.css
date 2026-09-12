@@ -353,6 +353,188 @@ main {
   display: block;
 }
 
+.dashboard-panel {
+  margin-top: 28px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.dashboard-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.dashboard-heading h2 {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+}
+
+.dashboard-copy {
+  margin: 9px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.readonly-label {
+  flex-shrink: 0;
+  border: 1px solid #d9ebe5;
+  border-radius: 999px;
+  padding: 8px 11px;
+  background: #f0f7f4;
+  color: var(--primary-dark);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.metric-card {
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 10px;
+  background: #f8fbfa;
+}
+
+.metric-card strong {
+  color: var(--primary-dark);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.metric-label {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.metric-pending {
+  border-left-color: var(--warning);
+}
+
+.metric-approved {
+  border-left-color: var(--success);
+}
+
+.metric-rejected {
+  border-left-color: var(--danger);
+}
+
+.dashboard-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(200px, 0.75fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f5faf8;
+}
+
+.dashboard-status-message {
+  min-height: 22px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.86rem;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.points-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.82rem;
+}
+
+.points-table th {
+  padding: 13px 14px;
+  background: #edf6f3;
+  color: var(--primary-dark);
+  font-size: 0.74rem;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.points-table td {
+  padding: 14px;
+  border-top: 1px solid #e5efec;
+  color: var(--muted);
+  vertical-align: middle;
+}
+
+.points-table tbody tr:hover {
+  background: #fbfdfc;
+}
+
+.points-table td:first-child {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-pill.pendente {
+  background: #fff4df;
+  color: #99600d;
+}
+
+.status-pill.aprovado {
+  background: #e7f7ed;
+  color: #207048;
+}
+
+.status-pill.rejeitado {
+  background: #ffebe8;
+  color: #a13c34;
+}
+
+.status-pill.desconhecido {
+  background: #edf1f1;
+  color: var(--muted);
+}
+
+.table-empty {
+  padding: 28px 16px !important;
+  color: var(--muted) !important;
+  text-align: center;
+}
+
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
   background: #fffdf9;
@@ -545,7 +727,8 @@ main {
   }
 
   .intro-row,
-  .map-panel {
+  .map-panel,
+  .dashboard-panel {
     padding: 20px 16px;
   }
 
@@ -568,6 +751,23 @@ main {
   }
 
   .primary-button {
+    width: 100%;
+  }
+
+  .dashboard-heading {
+    flex-direction: column;
+  }
+
+  .dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .dashboard-toolbar .filter-button {
     width: 100%;
   }
 

@@ -82,6 +82,70 @@
         <div id="map" class="map" aria-label="Mapa com os pontos aprovados de acesso à água"></div>
         <div id="map-message" class="map-message" aria-live="polite"></div>
       </section>
+
+      <section class="dashboard-panel" aria-labelledby="dashboard-title">
+        <div class="dashboard-heading">
+          <div>
+            <p class="section-kicker">Área administrativa</p>
+            <h2 id="dashboard-title">Dashboard Administrativo</h2>
+            <p class="dashboard-copy">Visualização dos pontos cadastrados e seus status de aprovação.</p>
+          </div>
+          <span class="readonly-label">Somente visualização</span>
+        </div>
+
+        <div class="dashboard-metrics" aria-label="Indicadores dos pontos">
+          <article class="metric-card metric-total">
+            <span class="metric-label">Total de pontos</span>
+            <strong id="dashboard-total">0</strong>
+          </article>
+          <article class="metric-card metric-pending">
+            <span class="metric-label">Pendentes</span>
+            <strong id="dashboard-pendentes">0</strong>
+          </article>
+          <article class="metric-card metric-approved">
+            <span class="metric-label">Aprovados</span>
+            <strong id="dashboard-aprovados">0</strong>
+          </article>
+          <article class="metric-card metric-rejected">
+            <span class="metric-label">Rejeitados</span>
+            <strong id="dashboard-rejeitados">0</strong>
+          </article>
+        </div>
+
+        <div class="dashboard-toolbar" aria-label="Filtros do dashboard">
+          <label class="search-field">
+            <span>Buscar ponto</span>
+            <input id="dashboard-busca" type="search" placeholder="Nome ou endereço" autocomplete="off" />
+          </label>
+          <label class="filter-field">
+            <span>Status de aprovação</span>
+            <select id="dashboard-status">
+              <option value="TODOS">Todos</option>
+              <option value="PENDENTE">Pendente</option>
+              <option value="APROVADO">Aprovado</option>
+              <option value="REJEITADO">Rejeitado</option>
+            </select>
+          </label>
+          <button id="dashboard-limpar" class="secondary-button filter-button" type="button">Limpar filtros</button>
+        </div>
+
+        <div id="dashboard-status-mensagem" class="dashboard-status-message" aria-live="polite"></div>
+        <div class="table-wrap">
+          <table class="points-table">
+            <thead>
+              <tr>
+                <th scope="col">Nome</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Endereço</th>
+                <th scope="col">Disponibilidade</th>
+                <th scope="col">Status de aprovação</th>
+                <th scope="col">Data de cadastro</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-tabela"></tbody>
+          </table>
+        </div>
+      </section>
     </main>
 
     <footer class="footer">

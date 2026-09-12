@@ -9,11 +9,21 @@ const buscaElement = document.getElementById('busca-ponto');
 const filtroTipoElement = document.getElementById('filtro-tipo');
 const filtroDisponibilidadeElement = document.getElementById('filtro-disponibilidade');
 const limparFiltrosElement = document.getElementById('limpar-filtros');
+const dashboardBuscaElement = document.getElementById('dashboard-busca');
+const dashboardStatusElement = document.getElementById('dashboard-status');
+const dashboardLimparElement = document.getElementById('dashboard-limpar');
+const dashboardTabelaElement = document.getElementById('dashboard-tabela');
+const dashboardMensagemElement = document.getElementById('dashboard-status-mensagem');
+const dashboardTotalElement = document.getElementById('dashboard-total');
+const dashboardPendentesElement = document.getElementById('dashboard-pendentes');
+const dashboardAprovadosElement = document.getElementById('dashboard-aprovados');
+const dashboardRejeitadosElement = document.getElementById('dashboard-rejeitados');
 const saoPauloCenter = [-23.5505, -46.6333];
 const map = L.map('map').setView(saoPauloCenter, 11);
 const markerLayer = L.layerGroup().addTo(map);
-let pontosAprovados = [];
+let pontosApi = [];
 let buscaTimeout;
+let dashboardBuscaTimeout;
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -50,6 +60,12 @@ buscaElement.addEventListener('input', () => {
 filtroTipoElement.addEventListener('change', aplicarFiltros);
 filtroDisponibilidadeElement.addEventListener('change', aplicarFiltros);
 limparFiltrosElement.addEventListener('click', limparFiltros);
+dashboardBuscaElement.addEventListener('input', () => {
+  window.clearTimeout(dashboardBuscaTimeout);
+  dashboardBuscaTimeout = window.setTimeout(renderizarDashboard, 250);
+});
+dashboardStatusElement.addEventListener('change', renderizarDashboard);
+dashboardLimparElement.addEventListener('click', limparFiltrosDashboard);
 
 function abrirCadastro() {
   formStatusElement.textContent = '';
@@ -170,9 +186,11 @@ async function carregarPontos() {
     }
 
     const pontos = await response.json();
+    pontosApi = Array.isArray(pontos) ? pontos : [];
+    atualizarIndicadoresDashboard(pontosApi);
+    renderizarDashboard();
 
-    if (!Array.isArray(pontos) || pontos.length === 0) {
-      pontosAprovados = [];
+    if (pontosApi.length === 0) {
       markerLayer.clearLayers();
       totalPointsElement.textContent = '0 pontos';
       statusElement.textContent = 'Nenhum ponto encontrado.';
@@ -181,14 +199,12 @@ async function carregarPontos() {
       return;
     }
 
-    pontosAprovados = pontos
-      .filter((ponto) => ponto.statusAprovacao === 'APROVADO')
-      .filter((ponto) => possuiLocalizacaoValida(ponto));
-
     aplicarFiltros();
   } catch (error) {
     console.error(error);
-    pontosAprovados = [];
+    pontosApi = [];
+    atualizarIndicadoresDashboard(pontosApi);
+    renderizarDashboard();
     markerLayer.clearLayers();
     statusElement.textContent = 'Não foi possível carregar os pontos da API.';
     statusElement.classList.add('error');
@@ -198,10 +214,72 @@ async function carregarPontos() {
   }
 }
 
+function atualizarIndicadoresDashboard(pontos) {
+  dashboardTotalElement.textContent = pontos.length;
+  dashboardPendentesElement.textContent = pontos.filter((ponto) => ponto.statusAprovacao === 'PENDENTE').length;
+  dashboardAprovadosElement.textContent = pontos.filter((ponto) => ponto.statusAprovacao === 'APROVADO').length;
+  dashboardRejeitadosElement.textContent = pontos.filter((ponto) => ponto.statusAprovacao === 'REJEITADO').length;
+}
+
+function renderizarDashboard() {
+  const termo = dashboardBuscaElement.value.trim().toLocaleLowerCase('pt-BR');
+  const statusSelecionado = dashboardStatusElement.value;
+  const resultados = pontosApi.filter((ponto) => {
+    const nome = String(ponto.nome || '').toLocaleLowerCase('pt-BR');
+    const endereco = String(ponto.endereco || '').toLocaleLowerCase('pt-BR');
+    const correspondeBusca = !termo || nome.includes(termo) || endereco.includes(termo);
+    const correspondeStatus = statusSelecionado === 'TODOS' || ponto.statusAprovacao === statusSelecionado;
+    return correspondeBusca && correspondeStatus;
+  });
+
+  dashboardTabelaElement.innerHTML = resultados.length > 0
+    ? resultados.map(criarLinhaDashboard).join('')
+    : '<tr><td class="table-empty" colspan="6">Nenhum ponto de água encontrado.</td></tr>';
+
+  dashboardMensagemElement.textContent = resultados.length > 0
+    ? `${resultados.length} ponto${resultados.length === 1 ? '' : 's'} encontrado${resultados.length === 1 ? '' : 's'}.`
+    : 'Nenhum ponto de água encontrado.';
+}
+
+function criarLinhaDashboard(ponto) {
+  const status = ponto.statusAprovacao || 'NÃO INFORMADO';
+  const classeStatus = status.toLocaleLowerCase('pt-BR');
+
+  return `
+    <tr>
+      <td data-label="Nome">${escaparHtml(ponto.nome || 'Sem nome')}</td>
+      <td data-label="Tipo">${escaparHtml(ponto.tipo || 'Não informado')}</td>
+      <td data-label="Endereço">${escaparHtml(ponto.endereco || 'Não informado')}</td>
+      <td data-label="Disponibilidade">${escaparHtml(ponto.disponibilidade || 'Não informado')}</td>
+      <td data-label="Status de aprovação"><span class="status-pill ${escaparHtml(classeStatus)}">${escaparHtml(status)}</span></td>
+      <td data-label="Data de cadastro">${formatarDataCadastro(ponto.dataCadastro)}</td>
+    </tr>
+  `;
+}
+
+function limparFiltrosDashboard() {
+  window.clearTimeout(dashboardBuscaTimeout);
+  dashboardBuscaElement.value = '';
+  dashboardStatusElement.value = 'TODOS';
+  renderizarDashboard();
+}
+
+function formatarDataCadastro(valor) {
+  if (!valor) {
+    return 'Não informada';
+  }
+
+  const data = new Date(valor);
+  return Number.isNaN(data.getTime()) ? escaparHtml(valor) : data.toLocaleString('pt-BR');
+}
+
 function aplicarFiltros() {
   const termo = buscaElement.value.trim().toLocaleLowerCase('pt-BR');
   const tipoSelecionado = filtroTipoElement.value;
   const disponibilidadeSelecionada = filtroDisponibilidadeElement.value;
+  const pontosAprovados = pontosApi
+      .filter((ponto) => ponto.statusAprovacao === 'APROVADO')
+      .filter((ponto) => possuiLocalizacaoValida(ponto));
   const pontosFiltrados = pontosAprovados.filter((ponto) => {
     const nome = String(ponto.nome || '').toLocaleLowerCase('pt-BR');
     const endereco = String(ponto.endereco || '').toLocaleLowerCase('pt-BR');
