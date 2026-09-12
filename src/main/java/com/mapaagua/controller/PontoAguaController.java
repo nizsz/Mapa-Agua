@@ -2,6 +2,7 @@ package com.mapaagua.controller;
 
 import com.mapaagua.dto.PontoAguaRequestDto;
 import com.mapaagua.dto.PontoAguaResponseDto;
+import com.mapaagua.dto.StatusPontoRequestDto;
 import com.mapaagua.service.PontoAguaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,12 @@ public class PontoAguaController {
     public ResponseEntity<PontoAguaResponseDto> atualizar(@PathVariable Long id,
                                                            @Valid @RequestBody PontoAguaRequestDto requestDto) {
         return ResponseEntity.ok(pontoAguaService.atualizar(id, requestDto));
+    }
+
+    @PatchMapping("/pontos/{id}/status")
+    public ResponseEntity<PontoAguaResponseDto> atualizarStatus(@PathVariable Long id,
+                                                                  @Valid @RequestBody StatusPontoRequestDto requestDto) {
+        return ResponseEntity.ok(pontoAguaService.atualizarStatus(id, requestDto.statusAprovacao()));
     }
 
     @DeleteMapping("/pontos/{id}")
