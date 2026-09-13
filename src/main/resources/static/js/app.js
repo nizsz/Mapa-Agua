@@ -24,6 +24,7 @@ const markerLayer = L.layerGroup().addTo(map);
 let pontosApi = [];
 let buscaTimeout;
 let dashboardBuscaTimeout;
+const pontosEmAtualizacao = new Set();
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -66,6 +67,7 @@ dashboardBuscaElement.addEventListener('input', () => {
 });
 dashboardStatusElement.addEventListener('change', renderizarDashboard);
 dashboardLimparElement.addEventListener('click', limparFiltrosDashboard);
+dashboardTabelaElement.addEventListener('click', tratarAcaoDashboard);
 
 function abrirCadastro() {
   formStatusElement.textContent = '';
@@ -161,16 +163,18 @@ function validarCadastro(payload) {
   return '';
 }
 
-async function obterMensagemErro(response) {
+async function obterMensagemErro(response, mensagemPadrao = `Não foi possível cadastrar o ponto (${response.status}).`) {
   try {
     const corpo = await response.json();
-    return corpo.message || corpo.error || `Não foi possível cadastrar o ponto (${response.status}).`;
+    return corpo.message || corpo.error || mensagemPadrao;
   } catch (error) {
-    return `Não foi possível cadastrar o ponto (${response.status}).`;
+    return mensagemPadrao;
   }
 }
 
-async function carregarPontos() {
+async function carregarPontos(opcoes = {}) {
+  const pontosAnteriores = pontosApi;
+  const preservarDadosEmErro = opcoes.preservarDadosEmErro === true;
   statusElement.textContent = 'Carregando pontos...';
 
   try {
@@ -202,14 +206,21 @@ async function carregarPontos() {
     aplicarFiltros();
   } catch (error) {
     console.error(error);
-    pontosApi = [];
+    pontosApi = preservarDadosEmErro && pontosAnteriores.length > 0 ? pontosAnteriores : [];
     atualizarIndicadoresDashboard(pontosApi);
     renderizarDashboard();
-    markerLayer.clearLayers();
+    if (pontosApi.length > 0) {
+      aplicarFiltros();
+    } else {
+      markerLayer.clearLayers();
+    }
     statusElement.textContent = 'Não foi possível carregar os pontos da API.';
     statusElement.classList.add('error');
     mostrarMensagem('Verifique a comunicação com o backend e tente novamente.');
     totalPointsElement.textContent = '0 pontos';
+    if (pontosApi.length > 0) {
+      totalPointsElement.textContent = `${pontosApi.filter((ponto) => ponto.statusAprovacao === 'APROVADO').length} pontos`;
+    }
     atualizarTamanhoMapa();
   }
 }
@@ -234,7 +245,7 @@ function renderizarDashboard() {
 
   dashboardTabelaElement.innerHTML = resultados.length > 0
     ? resultados.map(criarLinhaDashboard).join('')
-    : '<tr><td class="table-empty" colspan="6">Nenhum ponto de água encontrado.</td></tr>';
+    : '<tr><td class="table-empty" colspan="7">Nenhum ponto de água encontrado.</td></tr>';
 
   dashboardMensagemElement.textContent = resultados.length > 0
     ? `${resultados.length} ponto${resultados.length === 1 ? '' : 's'} encontrado${resultados.length === 1 ? '' : 's'}.`
@@ -244,17 +255,78 @@ function renderizarDashboard() {
 function criarLinhaDashboard(ponto) {
   const status = ponto.statusAprovacao || 'NÃO INFORMADO';
   const classeStatus = status.toLocaleLowerCase('pt-BR');
+  const acoes = status === 'PENDENTE'
+    ? `
+        <div class="dashboard-actions">
+          <button class="dashboard-action approve" type="button" data-acao="aprovar" data-ponto-id="${escaparHtml(ponto.id)}">Aprovar</button>
+          <button class="dashboard-action reject" type="button" data-acao="rejeitar" data-ponto-id="${escaparHtml(ponto.id)}">Rejeitar</button>
+        </div>
+      `
+    : '';
 
   return `
-    <tr>
+    <tr data-ponto-id="${escaparHtml(ponto.id)}">
       <td data-label="Nome">${escaparHtml(ponto.nome || 'Sem nome')}</td>
       <td data-label="Tipo">${escaparHtml(ponto.tipo || 'Não informado')}</td>
       <td data-label="Endereço">${escaparHtml(ponto.endereco || 'Não informado')}</td>
       <td data-label="Disponibilidade">${escaparHtml(ponto.disponibilidade || 'Não informado')}</td>
       <td data-label="Status de aprovação"><span class="status-pill ${escaparHtml(classeStatus)}">${escaparHtml(status)}</span></td>
       <td data-label="Data de cadastro">${formatarDataCadastro(ponto.dataCadastro)}</td>
+      <td data-label="Ações">${acoes}</td>
     </tr>
   `;
+}
+
+async function tratarAcaoDashboard(evento) {
+  const botao = evento.target.closest('[data-acao][data-ponto-id]');
+  if (!botao || !dashboardTabelaElement.contains(botao)) {
+    return;
+  }
+
+  const pontoId = botao.dataset.pontoId;
+  const statusAprovacao = botao.dataset.acao === 'aprovar' ? 'APROVADO' : 'REJEITADO';
+  const mensagemConfirmacao = statusAprovacao === 'APROVADO'
+    ? 'Deseja aprovar este ponto de água?'
+    : 'Deseja rejeitar este ponto de água?';
+
+  if (pontosEmAtualizacao.has(pontoId) || !window.confirm(mensagemConfirmacao)) {
+    return;
+  }
+
+  const linha = botao.closest('tr');
+  const botoesDaLinha = linha.querySelectorAll('[data-acao]');
+  pontosEmAtualizacao.add(pontoId);
+  botoesDaLinha.forEach((elemento) => {
+    elemento.disabled = true;
+  });
+  dashboardMensagemElement.textContent = 'Atualizando status do ponto...';
+
+  try {
+    const response = await fetch(`${apiUrl}/${encodeURIComponent(pontoId)}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ statusAprovacao })
+    });
+
+    if (!response.ok) {
+      const mensagem = await obterMensagemErro(response, `Não foi possível atualizar o status do ponto (${response.status}).`);
+      throw new Error(mensagem);
+    }
+
+    await carregarPontos({ preservarDadosEmErro: true });
+    dashboardMensagemElement.textContent = statusAprovacao === 'APROVADO'
+      ? 'Ponto aprovado com sucesso.'
+      : 'Ponto rejeitado com sucesso.';
+  } catch (error) {
+    console.error(error);
+    await carregarPontos({ preservarDadosEmErro: true });
+    dashboardMensagemElement.textContent = error.message || 'Não foi possível atualizar o status do ponto.';
+  } finally {
+    pontosEmAtualizacao.delete(pontoId);
+  }
 }
 
 function limparFiltrosDashboard() {

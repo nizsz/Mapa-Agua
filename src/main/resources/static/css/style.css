@@ -466,7 +466,7 @@ main {
 
 .points-table {
   width: 100%;
-  min-width: 820px;
+  min-width: 930px;
   border-collapse: collapse;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 0.82rem;
@@ -497,6 +497,57 @@ main {
 .points-table td:first-child {
   color: var(--text);
   font-weight: 700;
+}
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 170px;
+}
+
+.dashboard-action {
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 7px 9px;
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.74rem;
+  font-weight: 700;
+  transition: background-color 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+
+.dashboard-action.approve {
+  border-color: #b8e1c9;
+  background: #e7f7ed;
+  color: #207048;
+}
+
+.dashboard-action.approve:hover,
+.dashboard-action.approve:focus-visible {
+  border-color: #75bd91;
+  background: #d8f1e1;
+}
+
+.dashboard-action.reject {
+  border-color: #f0c5bf;
+  background: #ffebe8;
+  color: #a13c34;
+}
+
+.dashboard-action.reject:hover,
+.dashboard-action.reject:focus-visible {
+  border-color: #d98d84;
+  background: #ffddd8;
+}
+
+.dashboard-action:focus-visible {
+  outline: 3px solid rgba(12, 107, 104, 0.16);
+}
+
+.dashboard-action:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .status-pill {
