@@ -1,5 +1,6 @@
 package com.mapaagua.entity;
 
+import com.mapaagua.entity.Usuario;
 import com.mapaagua.enums.DisponibilidadeAgua;
 import com.mapaagua.enums.StatusAprovacaoPonto;
 import com.mapaagua.enums.TipoPontoAgua;
@@ -49,8 +50,9 @@ public class PontoAgua {
     @Column(name = "observacao")
     private String observacao;
 
-    @Column(name = "usuario_id", nullable = false)
-    private Long usuarioId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status_aprovacao", nullable = false)
@@ -160,12 +162,12 @@ public class PontoAgua {
         this.observacao = observacao;
     }
 
-    public Long getUsuarioId() {
-        return usuarioId;
+    public Usuario getUsuario() {
+        return usuario;
     }
 
-    public void setUsuarioId(Long usuarioId) {
-        this.usuarioId = usuarioId;
+    public void setUsuario(Usuario usuario) {
+        this.usuario = usuario;
     }
 
     public StatusAprovacaoPonto getStatusAprovacao() {

@@ -3,9 +3,15 @@ package com.mapaagua.service;
 import com.mapaagua.dto.PontoAguaRequestDto;
 import com.mapaagua.dto.PontoAguaResponseDto;
 import com.mapaagua.entity.PontoAgua;
+import com.mapaagua.entity.Usuario;
 import com.mapaagua.enums.StatusAprovacaoPonto;
 import com.mapaagua.repository.PontoAguaRepository;
+import com.mapaagua.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,11 +26,15 @@ public class PontoAguaService {
     private static final String PONTO_NAO_ENCONTRADO = "Ponto de água não encontrado";
 
     private final PontoAguaRepository pontoAguaRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    public PontoAguaService(PontoAguaRepository pontoAguaRepository) {
+    public PontoAguaService(PontoAguaRepository pontoAguaRepository,
+                            UsuarioRepository usuarioRepository) {
         this.pontoAguaRepository = pontoAguaRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<PontoAguaResponseDto> listarTodos() {
         return pontoAguaRepository.findAll()
                 .stream()
@@ -32,6 +42,7 @@ public class PontoAguaService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public PontoAguaResponseDto buscarPorId(Long id) {
         return toResponseDto(buscarEntidadePorId(id));
     }
@@ -42,7 +53,7 @@ public class PontoAguaService {
 
         PontoAgua pontoAgua = new PontoAgua();
         aplicarDados(pontoAgua, requestDto);
-        pontoAgua.setUsuarioId(0L);
+        pontoAgua.setUsuario(obterUsuarioAutenticado());
         pontoAgua.setStatusAprovacao(StatusAprovacaoPonto.PENDENTE);
         pontoAgua.setDataCadastro(LocalDateTime.now());
 
@@ -90,6 +101,31 @@ public class PontoAguaService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PONTO_NAO_ENCONTRADO));
     }
 
+    private Usuario obterUsuarioAutenticado() {
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        Authentication authentication = securityContext.getAuthentication();
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Usuário não autenticado");
+        }
+
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Usuário autenticado não encontrado"));
+
+        if (Boolean.FALSE.equals(usuario.getAtivo())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Usuário inativo não pode criar pontos de água");
+        }
+
+        return usuario;
+    }
+
     private void aplicarDados(PontoAgua pontoAgua, PontoAguaRequestDto requestDto) {
         pontoAgua.setNome(requestDto.nome());
         pontoAgua.setDescricao(requestDto.descricao());
@@ -122,7 +158,7 @@ public class PontoAguaService {
                 pontoAgua.getHorarioFim(),
                 pontoAgua.getDisponibilidade(),
                 pontoAgua.getObservacao(),
-                pontoAgua.getUsuarioId(),
+                pontoAgua.getUsuario().getId(),
                 pontoAgua.getStatusAprovacao(),
                 pontoAgua.getDataCadastro()
         );
