@@ -32,6 +32,42 @@ let dashboardBuscaTimeout;
 const pontosEmAtualizacao = new Set();
 let usuarioAutenticado = null;
 
+function lerCookie(nome) {
+  const cookies = document.cookie ? document.cookie.split(';') : [];
+  const prefixo = `${encodeURIComponent(nome)}=`;
+  const cookie = cookies.find((item) => item.trim().startsWith(prefixo));
+
+  if (!cookie) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(cookie.trim().slice(prefixo.length));
+  } catch (error) {
+    return null;
+  }
+}
+
+function apiFetch(url, opcoes = {}) {
+  const metodo = (opcoes.method || 'GET').toUpperCase();
+  const headers = new Headers(opcoes.headers || {});
+  const metodosMutaveis = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+  if (metodosMutaveis.includes(metodo)) {
+    const tokenCsrf = lerCookie('XSRF-TOKEN');
+    if (tokenCsrf) {
+      headers.set('X-XSRF-TOKEN', tokenCsrf);
+    }
+  }
+
+  return fetch(url, {
+    ...opcoes,
+    method: metodo,
+    credentials: 'same-origin',
+    headers
+  });
+}
+
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: '&copy; OpenStreetMap contributors'
@@ -237,7 +273,7 @@ async function enviarCadastro(evento) {
   formStatusElement.textContent = 'Enviando cadastro...';
 
   try {
-    const response = await fetch(apiUrl, {
+    const response = await apiFetch(apiUrl, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -432,7 +468,7 @@ async function tratarAcaoDashboard(evento) {
   dashboardMensagemElement.textContent = 'Atualizando status do ponto...';
 
   try {
-    const response = await fetch(`${apiUrl}/${encodeURIComponent(pontoId)}/status`, {
+    const response = await apiFetch(`${apiUrl}/${encodeURIComponent(pontoId)}/status`, {
       method: 'PATCH',
       headers: {
         'Accept': 'application/json',
