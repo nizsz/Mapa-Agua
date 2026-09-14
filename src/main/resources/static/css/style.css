@@ -130,6 +130,20 @@ body::before {
   font-weight: 700;
 }
 
+.auth-user-details {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.auth-user-profile {
+  color: #a9dfd4;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .auth-user-name {
   max-width: 180px;
   overflow: hidden;

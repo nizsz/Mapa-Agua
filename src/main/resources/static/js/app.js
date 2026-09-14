@@ -151,7 +151,10 @@ function renderizarAutenticacao() {
 
   authAreaElement.innerHTML = `
     <span class="auth-user">
-      <span class="auth-user-name">Olá, ${escaparHtml(usuarioAutenticado.nome)}</span>
+      <span class="auth-user-details">
+        <span class="auth-user-name">Olá, ${escaparHtml(usuarioAutenticado.nome)}</span>
+        <span class="auth-user-profile">${escaparHtml(usuarioAutenticado.perfil)}</span>
+      </span>
       <button id="sair-visual" class="auth-logout" type="button">Sair</button>
     </span>
   `;
@@ -159,6 +162,41 @@ function renderizarAutenticacao() {
     usuarioAutenticado = null;
     renderizarAutenticacao();
   });
+}
+
+async function restaurarSessao() {
+  try {
+    const response = await fetch('/api/auth/me', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      usuarioAutenticado = null;
+      renderizarAutenticacao();
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Não foi possível verificar a sessão (${response.status}).`);
+    }
+
+    const usuario = await response.json();
+    usuarioAutenticado = {
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      perfil: usuario.perfil
+    };
+    renderizarAutenticacao();
+  } catch (error) {
+    console.error(error);
+    usuarioAutenticado = null;
+    renderizarAutenticacao();
+  }
 }
 
 function abrirCadastro() {
@@ -560,4 +598,7 @@ function formatarHorario(valor) {
   return String(valor);
 }
 
-window.addEventListener('DOMContentLoaded', carregarPontos);
+window.addEventListener('DOMContentLoaded', () => {
+  carregarPontos();
+  restaurarSessao();
+});
