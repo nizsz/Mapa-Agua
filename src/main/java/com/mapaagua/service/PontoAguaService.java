@@ -4,6 +4,7 @@ import com.mapaagua.dto.PontoAguaRequestDto;
 import com.mapaagua.dto.PontoAguaResponseDto;
 import com.mapaagua.entity.PontoAgua;
 import com.mapaagua.entity.Usuario;
+import com.mapaagua.enums.PerfilUsuario;
 import com.mapaagua.enums.StatusAprovacaoPonto;
 import com.mapaagua.repository.PontoAguaRepository;
 import com.mapaagua.repository.UsuarioRepository;
@@ -63,6 +64,7 @@ public class PontoAguaService {
     @Transactional
     public PontoAguaResponseDto atualizar(Long id, PontoAguaRequestDto requestDto) {
         PontoAgua pontoAgua = buscarEntidadePorId(id);
+        validarPermissaoSobrePonto(pontoAgua, obterUsuarioAutenticado());
         validarHorarios(requestDto.horarioInicio(), requestDto.horarioFim());
         aplicarDados(pontoAgua, requestDto);
 
@@ -90,15 +92,29 @@ public class PontoAguaService {
 
     @Transactional
     public void deletar(Long id) {
-        if (!pontoAguaRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, PONTO_NAO_ENCONTRADO);
-        }
+        PontoAgua pontoAgua = buscarEntidadePorId(id);
+        validarPermissaoSobrePonto(pontoAgua, obterUsuarioAutenticado());
         pontoAguaRepository.deleteById(id);
     }
 
     private PontoAgua buscarEntidadePorId(Long id) {
         return pontoAguaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PONTO_NAO_ENCONTRADO));
+    }
+
+    private void validarPermissaoSobrePonto(PontoAgua pontoAgua, Usuario usuarioAutenticado) {
+        if (usuarioAutenticado.getPerfil() == PerfilUsuario.ADMINISTRADOR) {
+            return;
+        }
+
+        if (usuarioAutenticado.getPerfil() == PerfilUsuario.MORADOR
+                && pontoAgua.getUsuario().getId().equals(usuarioAutenticado.getId())) {
+            return;
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Usuário não possui permissão para alterar este ponto");
     }
 
     private Usuario obterUsuarioAutenticado() {
