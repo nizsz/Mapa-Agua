@@ -18,6 +18,11 @@ const dashboardTotalElement = document.getElementById('dashboard-total');
 const dashboardPendentesElement = document.getElementById('dashboard-pendentes');
 const dashboardAprovadosElement = document.getElementById('dashboard-aprovados');
 const dashboardRejeitadosElement = document.getElementById('dashboard-rejeitados');
+const authAreaElement = document.getElementById('auth-area');
+const abrirLoginElement = document.getElementById('abrir-login');
+const loginModal = document.getElementById('login-modal');
+const loginForm = document.getElementById('login-form');
+const loginStatusElement = document.getElementById('login-status');
 const saoPauloCenter = [-23.5505, -46.6333];
 const map = L.map('map').setView(saoPauloCenter, 11);
 const markerLayer = L.layerGroup().addTo(map);
@@ -25,6 +30,7 @@ let pontosApi = [];
 let buscaTimeout;
 let dashboardBuscaTimeout;
 const pontosEmAtualizacao = new Set();
+let usuarioAutenticado = null;
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -50,6 +56,11 @@ window.addEventListener('load', atualizarTamanhoMapa);
 window.addEventListener('resize', atualizarTamanhoMapa);
 
 document.getElementById('cadastrar-ponto').addEventListener('click', abrirCadastro);
+abrirLoginElement.addEventListener('click', abrirLogin);
+document.querySelectorAll('[data-fechar-login]').forEach((elemento) => {
+  elemento.addEventListener('click', fecharLogin);
+});
+loginForm.addEventListener('submit', enviarLogin);
 document.querySelectorAll('[data-fechar-modal]').forEach((elemento) => {
   elemento.addEventListener('click', fecharCadastro);
 });
@@ -68,6 +79,87 @@ dashboardBuscaElement.addEventListener('input', () => {
 dashboardStatusElement.addEventListener('change', renderizarDashboard);
 dashboardLimparElement.addEventListener('click', limparFiltrosDashboard);
 dashboardTabelaElement.addEventListener('click', tratarAcaoDashboard);
+
+function abrirLogin() {
+  loginStatusElement.textContent = '';
+  loginStatusElement.classList.remove('success');
+  loginModal.hidden = false;
+  loginForm.elements.email.focus();
+}
+
+function fecharLogin() {
+  loginModal.hidden = true;
+}
+
+async function enviarLogin(evento) {
+  evento.preventDefault();
+  loginStatusElement.classList.remove('success');
+
+  const dados = new FormData(loginForm);
+  const email = dados.get('email').trim();
+  const senha = dados.get('senha');
+
+  if (!email || !senha) {
+    loginStatusElement.textContent = 'Email e senha são obrigatórios.';
+    return;
+  }
+
+  loginStatusElement.textContent = 'Entrando...';
+
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, senha })
+    });
+
+    if (response.status === 401) {
+      loginStatusElement.textContent = 'Email ou senha inválidos.';
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error('Não foi possível entrar. Tente novamente.');
+    }
+
+    const usuario = await response.json();
+    usuarioAutenticado = {
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      perfil: usuario.perfil
+    };
+    loginForm.reset();
+    fecharLogin();
+    renderizarAutenticacao();
+  } catch (error) {
+    console.error(error);
+    loginStatusElement.textContent = error.message || 'Não foi possível entrar. Tente novamente.';
+  }
+}
+
+function renderizarAutenticacao() {
+  if (!usuarioAutenticado) {
+    authAreaElement.innerHTML = '<button id="abrir-login" class="auth-button" type="button">Entrar</button>';
+    authAreaElement.querySelector('#abrir-login').addEventListener('click', abrirLogin);
+    return;
+  }
+
+  authAreaElement.innerHTML = `
+    <span class="auth-user">
+      <span class="auth-user-name">Olá, ${escaparHtml(usuarioAutenticado.nome)}</span>
+      <button id="sair-visual" class="auth-logout" type="button">Sair</button>
+    </span>
+  `;
+  authAreaElement.querySelector('#sair-visual').addEventListener('click', () => {
+    usuarioAutenticado = null;
+    renderizarAutenticacao();
+  });
+}
 
 function abrirCadastro() {
   formStatusElement.textContent = '';

@@ -17,13 +17,52 @@
           <p class="eyebrow">Acesso à água potável</p>
           <h1>Mapa da Água</h1>
         </div>
-        <span class="live-label"><span class="live-dot"></span>Dados atualizados pela API</span>
+        <div class="topbar-actions">
+          <span class="live-label"><span class="live-dot"></span>Dados atualizados pela API</span>
+          <div id="auth-area" class="auth-area">
+            <button id="abrir-login" class="auth-button" type="button">Entrar</button>
+          </div>
+        </div>
       </div>
     </header>
 
     <main class="container">
       <section class="intro-row">
         <div>
+
+        <div id="login-modal" class="modal" hidden>
+          <div class="modal-backdrop" data-fechar-login></div>
+          <section class="modal-card login-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+            <div class="modal-header">
+              <div>
+                <p class="section-kicker">Acesso seguro</p>
+                <h2 id="login-title">Entrar na sua conta</h2>
+              </div>
+              <button class="close-button" type="button" aria-label="Fechar login" data-fechar-login>&times;</button>
+            </div>
+
+            <p id="login-status" class="form-status" aria-live="polite"></p>
+
+            <form id="login-form" novalidate>
+              <div class="login-fields">
+                <label class="field">
+                  Email
+                  <input name="email" type="email" autocomplete="email" required />
+                </label>
+
+                <label class="field">
+                  Senha
+                  <input name="senha" type="password" autocomplete="current-password" required />
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button class="secondary-button" type="button" data-fechar-login>Cancelar</button>
+                <button class="primary-button" type="submit">Entrar</button>
+              </div>
+            </form>
+          </section>
+        </div>
           <p class="section-kicker">Visão geral</p>
           <h2>Encontre água perto de você</h2>
           <p class="intro-copy">Explore os pontos aprovados e consulte as informações de atendimento diretamente no mapa.</p>
