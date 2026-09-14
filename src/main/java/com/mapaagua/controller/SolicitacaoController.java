@@ -6,10 +6,14 @@ import com.mapaagua.service.SolicitacaoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/solicitacoes")
@@ -21,11 +25,21 @@ public class SolicitacaoController {
         this.solicitacaoService = solicitacaoService;
     }
 
+    @GetMapping
+    public ResponseEntity<List<SolicitacaoResponseDto>> listar() {
+        return ResponseEntity.ok(solicitacaoService.listar());
+    }
+
     @PostMapping
     public ResponseEntity<SolicitacaoResponseDto> criar(
             @Valid @RequestBody SolicitacaoRequestDto request) {
 
         SolicitacaoResponseDto responseDto = solicitacaoService.criar(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+    }
+
+    @PostMapping("/{id}/assumir")
+    public ResponseEntity<SolicitacaoResponseDto> assumir(@PathVariable Long id) {
+        return ResponseEntity.ok(solicitacaoService.assumir(id));
     }
 }

@@ -17,6 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class SolicitacaoService {
 
@@ -50,6 +53,63 @@ public class SolicitacaoService {
         solicitacao.setLatitude(request.latitude());
         solicitacao.setLongitude(request.longitude());
         solicitacao.setStatus(StatusSolicitacao.CRIADA);
+
+        return toResponseDto(solicitacaoRepository.save(solicitacao));
+    }
+
+    @Transactional(readOnly = true)
+    public List<SolicitacaoResponseDto> listar() {
+        Usuario usuario = obterUsuarioAutenticado();
+        List<Solicitacao> solicitacoes;
+
+        if (usuario.getPerfil() == PerfilUsuario.ADMINISTRADOR) {
+            solicitacoes = solicitacaoRepository.findAll();
+        } else if (usuario.getPerfil() == PerfilUsuario.MORADOR) {
+            solicitacoes = solicitacaoRepository.findByUsuarioId(usuario.getId());
+        } else if (usuario.getPerfil() == PerfilUsuario.DISTRIBUIDOR) {
+            solicitacoes = new ArrayList<>(solicitacaoRepository.findByDistribuidorId(usuario.getId()));
+            solicitacoes.addAll(solicitacaoRepository.findAll().stream()
+                    .filter(solicitacao -> solicitacao.getDistribuidor() == null)
+                    .toList());
+        } else {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Usuário não possui permissão para consultar solicitações");
+        }
+
+        return solicitacoes.stream()
+                .map(this::toResponseDto)
+                .toList();
+    }
+
+    @Transactional
+    public SolicitacaoResponseDto assumir(Long id) {
+        Usuario usuario = obterUsuarioAutenticado();
+        if (usuario.getPerfil() != PerfilUsuario.DISTRIBUIDOR) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Somente distribuidores podem assumir solicitações");
+        }
+
+        Solicitacao solicitacao = solicitacaoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Solicitação não encontrada"));
+
+        if (solicitacao.getDistribuidor() != null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Solicitação já possui distribuidor");
+        }
+
+        if (solicitacao.getStatus() != StatusSolicitacao.CRIADA) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Solicitação não está disponível para aceite");
+        }
+
+        solicitacao.setDistribuidor(usuario);
+        solicitacao.setStatus(StatusSolicitacao.ACEITA);
 
         return toResponseDto(solicitacaoRepository.save(solicitacao));
     }
