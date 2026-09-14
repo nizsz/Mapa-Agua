@@ -60,6 +60,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/usuarios", "/api/auth/**").permitAll()
                         .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
                     .requestMatchers(HttpMethod.PATCH, "/api/pontos/*/status").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/pontos").hasAnyRole("MORADOR", "ADMINISTRADOR")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
