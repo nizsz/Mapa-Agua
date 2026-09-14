@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.http.HttpMethod;
 
 @Configuration
@@ -44,10 +45,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    AuthenticationProvider authenticationProvider) throws Exception {
+        CsrfTokenRequestAttributeHandler csrfRequestHandler =
+            new CsrfTokenRequestAttributeHandler();
+        csrfRequestHandler.setCsrfRequestAttributeName(null);
+
         http
                 .authenticationProvider(authenticationProvider)
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRequestHandler(csrfRequestHandler)
                         .ignoringRequestMatchers("/api/usuarios", "/api/auth/**")
                 )
                 .authorizeHttpRequests(auth -> auth
