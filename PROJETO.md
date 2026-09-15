@@ -534,39 +534,7 @@ Somente depois disso começar funcionalidades secundárias.
 
 ---
 
-## 16. Como o Claude Code deve trabalhar neste projeto
-
-Antes de criar código:
-- ler este arquivo;
-- verificar a estrutura existente do projeto;
-- respeitar as decisões documentadas;
-- explicar alterações importantes;
-- não substituir tecnologias sem necessidade.
-
-Ao implementar:
-- trabalhar em pequenas etapas;
-- testar cada etapa;
-- evitar criar código desnecessário;
-- manter arquitetura organizada;
-- não apagar funcionalidades existentes sem autorização;
-- usar nomes claros em português ou um padrão consistente definido no projeto.
-
-Quando houver dúvida sobre requisito:
-- não inventar uma regra;
-- sinalizar a dúvida;
-- propor opções antes de fazer uma mudança estrutural.
-
-Prioridade:
-1. funcionalidade;
-2. simplicidade;
-3. organização;
-4. testes;
-5. documentação;
-6. melhorias avançadas.
-
----
-
-## 17. Próximo passo
+## 16. Próximo passo
 
 Antes de programar, produzir:
 - documento de requisitos;
