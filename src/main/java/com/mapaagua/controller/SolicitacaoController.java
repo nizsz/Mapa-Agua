@@ -31,6 +31,11 @@ public class SolicitacaoController {
         return ResponseEntity.ok(solicitacaoService.listar());
     }
 
+    @PatchMapping("/{id}/iniciar-analise")
+    public ResponseEntity<SolicitacaoResponseDto> iniciarAnalise(@PathVariable Long id) {
+        return ResponseEntity.ok(solicitacaoService.iniciarAnalise(id));
+    }
+
     @PostMapping
     public ResponseEntity<SolicitacaoResponseDto> criar(
             @Valid @RequestBody SolicitacaoRequestDto request) {

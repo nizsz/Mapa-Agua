@@ -83,6 +83,31 @@ public class SolicitacaoService {
     }
 
     @Transactional
+    public SolicitacaoResponseDto iniciarAnalise(Long id) {
+        Usuario usuario = obterUsuarioAutenticado();
+        if (usuario.getPerfil() != PerfilUsuario.ADMINISTRADOR) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Somente administradores podem iniciar a análise de solicitações");
+        }
+
+        Solicitacao solicitacao = solicitacaoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Solicitação não encontrada"));
+
+        if (solicitacao.getStatus() != StatusSolicitacao.CRIADA) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "A solicitação não está no estado inicial");
+        }
+
+        solicitacao.setStatus(StatusSolicitacao.EM_ANALISE);
+
+        return toResponseDto(solicitacaoRepository.save(solicitacao));
+    }
+
+    @Transactional
     public SolicitacaoResponseDto assumir(Long id) {
         Usuario usuario = obterUsuarioAutenticado();
         if (usuario.getPerfil() != PerfilUsuario.DISTRIBUIDOR) {
