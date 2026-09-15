@@ -1,5 +1,6 @@
 package com.mapaagua.service;
 
+import com.mapaagua.dto.AlterarPerfilRequestDto;
 import com.mapaagua.dto.UsuarioCadastroRequestDto;
 import com.mapaagua.dto.UsuarioResponseDto;
 import com.mapaagua.entity.Usuario;
@@ -46,6 +47,30 @@ public class UsuarioService {
 
     public UsuarioResponseDto buscarPorId(Long id) {
         return toResponseDto(buscarEntidadePorId(id));
+    }
+
+    @Transactional
+    public UsuarioResponseDto alterarPerfil(Long id, AlterarPerfilRequestDto requestDto) {
+        Usuario usuario = buscarEntidadePorId(id);
+        usuario.setPerfil(parsePerfilAlteravel(requestDto.perfil()));
+
+        return toResponseDto(usuarioRepository.save(usuario));
+    }
+
+    private PerfilUsuario parsePerfilAlteravel(String perfil) {
+        PerfilUsuario perfilUsuario;
+        try {
+            perfilUsuario = PerfilUsuario.valueOf(perfil.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Perfil inválido");
+        }
+
+        if (perfilUsuario == PerfilUsuario.ADMINISTRADOR) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Não é permitido definir o perfil ADMINISTRADOR por esta operação");
+        }
+
+        return perfilUsuario;
     }
 
     private Usuario buscarEntidadePorId(Long id) {

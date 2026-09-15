@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pontos").permitAll()
                     .requestMatchers(HttpMethod.PATCH, "/api/pontos/*/status").hasRole("ADMINISTRADOR")
+                    .requestMatchers(HttpMethod.PATCH, "/api/usuarios/*/perfil").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/pontos").hasAnyRole("MORADOR", "ADMINISTRADOR")
                         .anyRequest().authenticated()
                 )
