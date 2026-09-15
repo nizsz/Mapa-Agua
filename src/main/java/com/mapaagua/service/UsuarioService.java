@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Locale;
 
 @Service
@@ -47,6 +48,12 @@ public class UsuarioService {
 
     public UsuarioResponseDto buscarPorId(Long id) {
         return toResponseDto(buscarEntidadePorId(id));
+    }
+
+    public List<UsuarioResponseDto> listarTodos() {
+        return usuarioRepository.findAll().stream()
+                .map(this::toResponseDto)
+                .toList();
     }
 
     @Transactional

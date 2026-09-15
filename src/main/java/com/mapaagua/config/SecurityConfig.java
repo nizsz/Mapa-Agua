@@ -57,6 +57,7 @@ public class SecurityConfig {
                         .ignoringRequestMatchers("/api/usuarios", "/api/auth/**")
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/usuarios", "/api/auth/**").permitAll()
                         .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pontos").permitAll()
