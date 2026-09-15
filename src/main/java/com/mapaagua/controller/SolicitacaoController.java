@@ -41,6 +41,11 @@ public class SolicitacaoController {
         return ResponseEntity.ok(solicitacaoService.aceitar(id));
     }
 
+    @PatchMapping("/{id}/recusar")
+    public ResponseEntity<SolicitacaoResponseDto> recusar(@PathVariable Long id) {
+        return ResponseEntity.ok(solicitacaoService.recusar(id));
+    }
+
     @PostMapping
     public ResponseEntity<SolicitacaoResponseDto> criar(
             @Valid @RequestBody SolicitacaoRequestDto request) {
