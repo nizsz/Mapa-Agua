@@ -186,6 +186,19 @@
           </table>
         </div>
       </section>
+
+      <section id="solicitacoes-section" class="solicitacoes-panel" aria-labelledby="solicitacoes-title" hidden>
+        <div class="solicitacoes-heading">
+          <div>
+            <p class="section-kicker">Abastecimento</p>
+            <h2 id="solicitacoes-title">Solicitações</h2>
+            <p id="solicitacoes-copy" class="dashboard-copy">Acompanhe as necessidades de abastecimento.</p>
+          </div>
+          <button id="abrir-solicitacao" class="primary-button" type="button" hidden>Solicitar abastecimento</button>
+        </div>
+        <div id="solicitacoes-status" class="dashboard-status-message" aria-live="polite"></div>
+        <div id="solicitacoes-conteudo" class="solicitacoes-content"></div>
+      </section>
     </main>
 
     <footer class="footer">
@@ -273,6 +286,71 @@
           <div class="form-actions">
             <button class="secondary-button" type="button" data-fechar-modal>Cancelar</button>
             <button class="primary-button" type="submit">Enviar cadastro</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div id="solicitacao-modal" class="modal" hidden>
+      <div class="modal-backdrop" data-fechar-solicitacao></div>
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="solicitacao-title">
+        <div class="modal-header">
+          <div>
+            <p class="section-kicker">Nova necessidade</p>
+            <h2 id="solicitacao-title">Solicitar abastecimento</h2>
+          </div>
+          <button class="close-button" type="button" aria-label="Fechar solicitação" data-fechar-solicitacao>&times;</button>
+        </div>
+
+        <p id="solicitacao-form-status" class="form-status" aria-live="polite"></p>
+
+        <form id="solicitacao-form" novalidate>
+          <div class="form-grid">
+            <label class="field">
+              Quantidade de litros <span aria-hidden="true">*</span>
+              <input name="quantidadeLitros" type="number" min="1" step="1" required />
+            </label>
+
+            <label class="field">
+              Número de pessoas <span aria-hidden="true">*</span>
+              <input name="quantidadePessoas" type="number" min="1" step="1" required />
+            </label>
+
+            <label class="field field-wide">
+              Urgência <span aria-hidden="true">*</span>
+              <select name="urgencia" required>
+                <option value="">Selecione</option>
+                <option value="BAIXA">Baixa</option>
+                <option value="MEDIA">Média</option>
+                <option value="ALTA">Alta</option>
+              </select>
+            </label>
+
+            <label class="field field-wide">
+              Descrição
+              <textarea name="descricao" rows="2"></textarea>
+            </label>
+
+            <label class="field field-wide">
+              Endereço <span aria-hidden="true">*</span>
+              <input name="endereco" type="text" required />
+            </label>
+
+            <label class="field">
+              Latitude <span aria-hidden="true">*</span>
+              <input name="latitude" type="number" min="-90" max="90" step="any" required />
+            </label>
+
+            <label class="field">
+              Longitude <span aria-hidden="true">*</span>
+              <input name="longitude" type="number" min="-180" max="180" step="any" required />
+            </label>
+          </div>
+
+          <p class="required-note">* Campos obrigatórios. A solicitação será analisada pela equipe.</p>
+          <div class="form-actions">
+            <button class="secondary-button" type="button" data-fechar-solicitacao>Cancelar</button>
+            <button class="primary-button" type="submit">Enviar solicitação</button>
           </div>
         </form>
       </section>

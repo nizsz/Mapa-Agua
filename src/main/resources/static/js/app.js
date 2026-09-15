@@ -23,6 +23,14 @@ const abrirLoginElement = document.getElementById('abrir-login');
 const loginModal = document.getElementById('login-modal');
 const loginForm = document.getElementById('login-form');
 const loginStatusElement = document.getElementById('login-status');
+const solicitacoesSectionElement = document.getElementById('solicitacoes-section');
+const solicitacoesCopyElement = document.getElementById('solicitacoes-copy');
+const solicitacoesStatusElement = document.getElementById('solicitacoes-status');
+const solicitacoesConteudoElement = document.getElementById('solicitacoes-conteudo');
+const abrirSolicitacaoElement = document.getElementById('abrir-solicitacao');
+const solicitacaoModal = document.getElementById('solicitacao-modal');
+const solicitacaoForm = document.getElementById('solicitacao-form');
+const solicitacaoFormStatusElement = document.getElementById('solicitacao-form-status');
 const saoPauloCenter = [-23.5505, -46.6333];
 const map = L.map('map').setView(saoPauloCenter, 11);
 const markerLayer = L.layerGroup().addTo(map);
@@ -31,6 +39,8 @@ let buscaTimeout;
 let dashboardBuscaTimeout;
 const pontosEmAtualizacao = new Set();
 let usuarioAutenticado = null;
+let solicitacoesApi = [];
+const solicitacoesEmAtualizacao = new Set();
 
 function lerCookie(nome) {
   const cookies = document.cookie ? document.cookie.split(';') : [];
@@ -97,6 +107,11 @@ document.querySelectorAll('[data-fechar-login]').forEach((elemento) => {
   elemento.addEventListener('click', fecharLogin);
 });
 loginForm.addEventListener('submit', enviarLogin);
+abrirSolicitacaoElement.addEventListener('click', abrirSolicitacao);
+document.querySelectorAll('[data-fechar-solicitacao]').forEach((elemento) => {
+  elemento.addEventListener('click', fecharSolicitacao);
+});
+solicitacaoForm.addEventListener('submit', enviarSolicitacao);
 document.querySelectorAll('[data-fechar-modal]').forEach((elemento) => {
   elemento.addEventListener('click', fecharCadastro);
 });
@@ -115,6 +130,7 @@ dashboardBuscaElement.addEventListener('input', () => {
 dashboardStatusElement.addEventListener('change', renderizarDashboard);
 dashboardLimparElement.addEventListener('click', limparFiltrosDashboard);
 dashboardTabelaElement.addEventListener('click', tratarAcaoDashboard);
+solicitacoesConteudoElement.addEventListener('click', tratarAcaoSolicitacao);
 
 function abrirLogin() {
   loginStatusElement.textContent = '';
@@ -172,6 +188,7 @@ async function enviarLogin(evento) {
     loginForm.reset();
     fecharLogin();
     renderizarAutenticacao();
+    await carregarSolicitacoes();
   } catch (error) {
     console.error(error);
     loginStatusElement.textContent = error.message || 'Não foi possível entrar. Tente novamente.';
@@ -180,6 +197,10 @@ async function enviarLogin(evento) {
 
 function renderizarAutenticacao() {
   if (!usuarioAutenticado) {
+    solicitacoesApi = [];
+    solicitacoesSectionElement.hidden = true;
+    solicitacoesConteudoElement.innerHTML = '';
+    solicitacoesStatusElement.textContent = '';
     authAreaElement.innerHTML = '<button id="abrir-login" class="auth-button" type="button">Entrar</button>';
     authAreaElement.querySelector('#abrir-login').addEventListener('click', abrirLogin);
     return;
@@ -196,6 +217,7 @@ function renderizarAutenticacao() {
   `;
   authAreaElement.querySelector('#sair-visual').addEventListener('click', () => {
     usuarioAutenticado = null;
+    solicitacoesApi = [];
     renderizarAutenticacao();
   });
 }
@@ -228,11 +250,315 @@ async function restaurarSessao() {
       perfil: usuario.perfil
     };
     renderizarAutenticacao();
+    await carregarSolicitacoes();
   } catch (error) {
     console.error(error);
     usuarioAutenticado = null;
     renderizarAutenticacao();
   }
+}
+
+function abrirSolicitacao() {
+  solicitacaoFormStatusElement.textContent = '';
+  solicitacaoFormStatusElement.classList.remove('success');
+  solicitacaoModal.hidden = false;
+  solicitacaoForm.elements.quantidadeLitros.focus();
+}
+
+function fecharSolicitacao() {
+  solicitacaoModal.hidden = true;
+}
+
+async function enviarSolicitacao(evento) {
+  evento.preventDefault();
+  solicitacaoFormStatusElement.classList.remove('success');
+
+  const dados = new FormData(solicitacaoForm);
+  const payload = {
+    quantidadeLitros: Number(dados.get('quantidadeLitros')),
+    quantidadePessoas: Number(dados.get('quantidadePessoas')),
+    urgencia: dados.get('urgencia'),
+    descricao: dados.get('descricao').trim() || null,
+    endereco: dados.get('endereco').trim(),
+    latitude: Number(dados.get('latitude')),
+    longitude: Number(dados.get('longitude'))
+  };
+
+  const erro = validarSolicitacao(payload);
+  if (erro) {
+    solicitacaoFormStatusElement.textContent = erro;
+    return;
+  }
+
+  solicitacaoFormStatusElement.textContent = 'Enviando solicitação...';
+
+  try {
+    const response = await apiFetch('/api/solicitacoes', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(await obterMensagemSolicitacao(response));
+    }
+
+    solicitacaoForm.reset();
+    fecharSolicitacao();
+    solicitacoesStatusElement.textContent = 'Solicitação criada com sucesso.';
+    await carregarSolicitacoes();
+  } catch (error) {
+    console.error(error);
+    solicitacaoFormStatusElement.textContent = error.message || 'Não foi possível criar a solicitação.';
+  }
+}
+
+function validarSolicitacao(payload) {
+  if (!Number.isInteger(payload.quantidadeLitros) || payload.quantidadeLitros <= 0) {
+    return 'Quantidade de litros deve ser um número positivo.';
+  }
+  if (!Number.isInteger(payload.quantidadePessoas) || payload.quantidadePessoas <= 0) {
+    return 'Quantidade de pessoas deve ser um número positivo.';
+  }
+  if (!payload.urgencia) {
+    return 'Urgência é obrigatória.';
+  }
+  if (!payload.endereco) {
+    return 'Endereço é obrigatório.';
+  }
+  if (!Number.isFinite(payload.latitude) || payload.latitude < -90 || payload.latitude > 90) {
+    return 'Latitude deve estar entre -90 e 90.';
+  }
+  if (!Number.isFinite(payload.longitude) || payload.longitude < -180 || payload.longitude > 180) {
+    return 'Longitude deve estar entre -180 e 180.';
+  }
+  return '';
+}
+
+async function obterMensagemSolicitacao(response) {
+  if (response.status === 401) {
+    return 'Usuário não autenticado.';
+  }
+  if (response.status === 403) {
+    return 'Você não possui permissão para esta ação.';
+  }
+  if (response.status === 404) {
+    return 'Solicitação não encontrada.';
+  }
+  return obterMensagemErro(response, `Não foi possível concluir a operação (${response.status}).`);
+}
+
+async function carregarSolicitacoes() {
+  if (!usuarioAutenticado) {
+    return;
+  }
+
+  solicitacoesStatusElement.textContent = 'Carregando solicitações...';
+  try {
+    const response = await fetch('/api/solicitacoes', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin'
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      solicitacoesApi = [];
+      solicitacoesSectionElement.hidden = true;
+      return;
+    }
+    if (!response.ok) {
+      throw new Error(await obterMensagemSolicitacao(response));
+    }
+
+    solicitacoesApi = await response.json();
+    solicitacoesSectionElement.hidden = false;
+    renderizarSolicitacoes();
+  } catch (error) {
+    console.error(error);
+    solicitacoesSectionElement.hidden = false;
+    solicitacoesStatusElement.textContent = error.message || 'Não foi possível carregar as solicitações.';
+    solicitacoesConteudoElement.innerHTML = '';
+  }
+}
+
+function renderizarSolicitacoes() {
+  if (!usuarioAutenticado) {
+    solicitacoesSectionElement.hidden = true;
+    return;
+  }
+
+  solicitacoesSectionElement.hidden = false;
+  solicitacoesCopyElement.textContent = usuarioAutenticado.perfil === 'ADMINISTRADOR'
+    ? 'Acompanhe e conduza o fluxo de solicitações.'
+    : usuarioAutenticado.perfil === 'DISTRIBUIDOR'
+      ? 'Veja solicitações disponíveis e as que estão sob sua responsabilidade.'
+      : 'Acompanhe suas necessidades de abastecimento.';
+  abrirSolicitacaoElement.hidden = usuarioAutenticado.perfil !== 'MORADOR';
+
+  if (usuarioAutenticado.perfil === 'ADMINISTRADOR') {
+    renderizarSolicitacoesAdmin();
+  } else if (usuarioAutenticado.perfil === 'DISTRIBUIDOR') {
+    renderizarSolicitacoesDistribuidor();
+  } else {
+    renderizarSolicitacoesMorador();
+  }
+}
+
+function renderizarSolicitacoesMorador() {
+  solicitacoesConteudoElement.innerHTML = solicitacoesApi.length > 0
+    ? solicitacoesApi.map(criarCardSolicitacao).join('')
+    : '<p class="table-empty">Você ainda não possui solicitações.</p>';
+  solicitacoesStatusElement.textContent = `${solicitacoesApi.length} solicitação${solicitacoesApi.length === 1 ? '' : 'ões'}.`;
+}
+
+function renderizarSolicitacoesDistribuidor() {
+  const disponiveis = solicitacoesApi.filter(
+  (solicitacao) =>
+    (solicitacao.status === 'CRIADA' || solicitacao.status === 'ACEITA') &&
+    solicitacao.distribuidorId == null
+);
+  const minhas = solicitacoesApi.filter((solicitacao) => solicitacao.distribuidorId === usuarioAutenticado.id);
+  solicitacoesConteudoElement.innerHTML = `
+    <div class="solicitacoes-group">
+      <h3 class="solicitacoes-group-title">Disponíveis</h3>
+      ${disponiveis.length > 0 ? disponiveis.map(criarCardSolicitacao).join('') : '<p class="table-empty">Nenhuma solicitação disponível.</p>'}
+    </div>
+    <div class="solicitacoes-group">
+      <h3 class="solicitacoes-group-title">Minhas solicitações</h3>
+      ${minhas.length > 0 ? minhas.map(criarCardSolicitacao).join('') : '<p class="table-empty">Nenhuma solicitação atribuída.</p>'}
+    </div>
+  `;
+  solicitacoesStatusElement.textContent = `${solicitacoesApi.length} solicitação${solicitacoesApi.length === 1 ? '' : 'ões'} visível${solicitacoesApi.length === 1 ? '' : 'is'}.`;
+}
+
+function renderizarSolicitacoesAdmin() {
+  solicitacoesConteudoElement.innerHTML = solicitacoesApi.length > 0
+    ? `<div class="solicitacoes-table-wrap"><table class="solicitacoes-table"><thead><tr><th>ID</th><th>Solicitante</th><th>Necessidade</th><th>Urgência</th><th>Endereço</th><th>Status</th><th>Distribuidor</th><th>Data</th><th>Ações</th></tr></thead><tbody>${solicitacoesApi.map(criarLinhaSolicitacaoAdmin).join('')}</tbody></table></div>`
+    : '<p class="table-empty">Nenhuma solicitação encontrada.</p>';
+  solicitacoesStatusElement.textContent = `${solicitacoesApi.length} solicitação${solicitacoesApi.length === 1 ? '' : 'ões'} encontrada${solicitacoesApi.length === 1 ? '' : 's'}.`;
+}
+
+function criarCardSolicitacao(solicitacao) {
+  const acoes = criarAcoesSolicitacao(solicitacao);
+  return `
+    <article class="solicitacao-card">
+      <div>
+        <h3>Solicitação #${escaparHtml(solicitacao.id)}</h3>
+        <div class="solicitacao-details">
+          <span><strong>Quantidade:</strong> ${escaparHtml(solicitacao.quantidadeLitros)} L</span>
+          <span><strong>Pessoas:</strong> ${escaparHtml(solicitacao.quantidadePessoas)}</span>
+          <span><strong>Urgência:</strong> ${escaparHtml(solicitacao.urgencia)}</span>
+          <span><strong>Endereço:</strong> ${escaparHtml(solicitacao.endereco)}</span>
+          <span><strong>Status:</strong> ${criarStatusSolicitacao(solicitacao.status)}</span>
+          <span><strong>Distribuidor:</strong> ${solicitacao.distribuidorId == null ? 'Aguardando distribuidor' : 'Distribuidor atribuído'}</span>
+          <span><strong>Data:</strong> ${formatarDataCadastro(solicitacao.dataCriacao)}</span>
+          <span><strong>Descrição:</strong> ${escaparHtml(solicitacao.descricao || 'Não informada')}</span>
+        </div>
+      </div>
+      <div class="solicitacao-actions">${acoes}</div>
+    </article>
+  `;
+}
+
+function criarLinhaSolicitacaoAdmin(solicitacao) {
+  return `
+    <tr>
+      <td data-label="ID">${escaparHtml(solicitacao.id)}</td>
+      <td data-label="Solicitante">${escaparHtml(solicitacao.usuarioId)}</td>
+      <td data-label="Necessidade">${escaparHtml(solicitacao.quantidadeLitros)} L / ${escaparHtml(solicitacao.quantidadePessoas)} pessoas</td>
+      <td data-label="Urgência">${escaparHtml(solicitacao.urgencia)}</td>
+      <td data-label="Endereço">${escaparHtml(solicitacao.endereco)}</td>
+      <td data-label="Status">${criarStatusSolicitacao(solicitacao.status)}</td>
+      <td data-label="Distribuidor">${solicitacao.distribuidorId == null ? 'Não atribuído' : escaparHtml(solicitacao.distribuidorId)}</td>
+      <td data-label="Data">${formatarDataCadastro(solicitacao.dataCriacao)}</td>
+      <td data-label="Ações"><div class="solicitacao-actions">${criarAcoesSolicitacao(solicitacao)}</div></td>
+    </tr>
+  `;
+}
+
+function criarStatusSolicitacao(status) {
+  const classe = String(status || 'desconhecido').toLocaleLowerCase('pt-BR');
+  return `<span class="status-pill ${escaparHtml(classe)}">${escaparHtml(status || 'Não informado')}</span>`;
+}
+
+function criarAcoesSolicitacao(solicitacao) {
+  const botoes = [];
+  const perfil = usuarioAutenticado.perfil;
+  const id = escaparHtml(solicitacao.id);
+
+  if (perfil === 'MORADOR' || perfil === 'DISTRIBUIDOR' && solicitacao.distribuidorId === usuarioAutenticado.id) {
+    if (perfil === 'DISTRIBUIDOR' && solicitacao.status === 'ACEITA') {
+      botoes.push(`<button class="solicitacao-action" type="button" data-acao-solicitacao="iniciar-distribuicao" data-solicitacao-id="${id}">Iniciar distribuição</button>`);
+    }
+    if (perfil === 'DISTRIBUIDOR' && solicitacao.status === 'EM_DISTRIBUICAO') {
+      botoes.push(`<button class="solicitacao-action" type="button" data-acao-solicitacao="atender" data-solicitacao-id="${id}">Marcar como atendida</button>`);
+    }
+  }
+
+  if (perfil === 'DISTRIBUIDOR' && (solicitacao.status === 'CRIADA' || solicitacao.status === 'ACEITA') && solicitacao.distribuidorId == null) {
+    botoes.push(`<button class="solicitacao-action" type="button" data-acao-solicitacao="assumir" data-solicitacao-id="${id}">Assumir solicitação</button>`);
+  }
+
+  if (perfil === 'ADMINISTRADOR') {
+    if (solicitacao.status === 'CRIADA') {
+      botoes.push(`<button class="solicitacao-action" type="button" data-acao-solicitacao="iniciar-analise" data-solicitacao-id="${id}">Colocar em análise</button>`);
+    }
+    if (solicitacao.status === 'EM_ANALISE') {
+      botoes.push(`<button class="solicitacao-action" type="button" data-acao-solicitacao="aceitar" data-solicitacao-id="${id}">Aceitar</button>`);
+      botoes.push(`<button class="solicitacao-action danger" type="button" data-acao-solicitacao="recusar" data-solicitacao-id="${id}">Recusar</button>`);
+    }
+  }
+
+  return botoes.join('');
+}
+
+async function tratarAcaoSolicitacao(evento) {
+  const botao = evento.target.closest('[data-acao-solicitacao][data-solicitacao-id]');
+  if (!botao || !solicitacoesConteudoElement.contains(botao)) {
+    return;
+  }
+
+  const id = botao.dataset.solicitacaoId;
+  const acao = botao.dataset.acaoSolicitacao;
+  const chave = `${acao}:${id}`;
+  if (solicitacoesEmAtualizacao.has(chave)) {
+    return;
+  }
+
+  solicitacoesEmAtualizacao.add(chave);
+  botao.disabled = true;
+  try {
+    const response = await executarAcaoSolicitacao(acao, id);
+    if (!response.ok) {
+      throw new Error(await obterMensagemSolicitacao(response));
+    }
+    await carregarSolicitacoes();
+  } catch (error) {
+    console.error(error);
+    solicitacoesStatusElement.textContent = error.message || 'Não foi possível concluir a operação.';
+    botao.disabled = false;
+  } finally {
+    solicitacoesEmAtualizacao.delete(chave);
+  }
+}
+
+function executarAcaoSolicitacao(acao, id) {
+  const endpoints = {
+    assumir: { method: 'POST', path: `/api/solicitacoes/${encodeURIComponent(id)}/assumir` },
+    'iniciar-analise': { method: 'PATCH', path: `/api/solicitacoes/${encodeURIComponent(id)}/iniciar-analise` },
+    aceitar: { method: 'PATCH', path: `/api/solicitacoes/${encodeURIComponent(id)}/aceitar` },
+    recusar: { method: 'PATCH', path: `/api/solicitacoes/${encodeURIComponent(id)}/recusar` },
+    'iniciar-distribuicao': { method: 'PATCH', path: `/api/solicitacoes/${encodeURIComponent(id)}/iniciar-distribuicao` },
+    atender: { method: 'PATCH', path: `/api/solicitacoes/${encodeURIComponent(id)}/atender` }
+  };
+  const endpoint = endpoints[acao];
+  return apiFetch(endpoint.path, {
+    method: endpoint.method,
+    headers: { 'Accept': 'application/json' }
+  });
 }
 
 function abrirCadastro() {

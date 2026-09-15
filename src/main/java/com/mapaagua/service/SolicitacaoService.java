@@ -177,14 +177,17 @@ public class SolicitacaoService {
                     "Solicitação já possui distribuidor");
         }
 
-        if (solicitacao.getStatus() != StatusSolicitacao.CRIADA) {
+        if (solicitacao.getStatus() != StatusSolicitacao.CRIADA
+            && solicitacao.getStatus() != StatusSolicitacao.ACEITA) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Solicitação não está disponível para aceite");
         }
 
         solicitacao.setDistribuidor(usuario);
-        solicitacao.setStatus(StatusSolicitacao.ACEITA);
+        if (solicitacao.getStatus() == StatusSolicitacao.CRIADA) {
+            solicitacao.setStatus(StatusSolicitacao.ACEITA);
+        }
 
         return toResponseDto(solicitacaoRepository.save(solicitacao));
     }
