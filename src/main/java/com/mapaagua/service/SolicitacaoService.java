@@ -151,6 +151,43 @@ public class SolicitacaoService {
         return toResponseDto(solicitacaoRepository.save(solicitacao));
     }
 
+    @Transactional
+    public SolicitacaoResponseDto atender(Long id) {
+        Usuario usuario = obterUsuarioAutenticado();
+        if (usuario.getPerfil() != PerfilUsuario.DISTRIBUIDOR) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Somente distribuidores podem marcar solicitações como atendidas");
+        }
+
+        Solicitacao solicitacao = solicitacaoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Solicitação não encontrada"));
+
+        if (solicitacao.getDistribuidor() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Solicitação não possui distribuidor responsável");
+        }
+
+        if (!solicitacao.getDistribuidor().getId().equals(usuario.getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Somente o distribuidor responsavel pode marcar a solicitacao como atendida");
+        }
+
+        if (solicitacao.getStatus() != StatusSolicitacao.EM_DISTRIBUICAO) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "A solicitacao nao esta em distribuicao");
+        }
+
+        solicitacao.setStatus(StatusSolicitacao.ATENDIDA);
+
+        return toResponseDto(solicitacaoRepository.save(solicitacao));
+    }
+
     private Usuario obterUsuarioAutenticado() {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         Authentication authentication = securityContext.getAuthentication();

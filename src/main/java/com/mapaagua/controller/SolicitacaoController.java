@@ -48,4 +48,9 @@ public class SolicitacaoController {
     public ResponseEntity<SolicitacaoResponseDto> iniciarDistribuicao(@PathVariable Long id) {
         return ResponseEntity.ok(solicitacaoService.iniciarDistribuicao(id));
     }
+
+    @PatchMapping("/{id}/atender")
+    public ResponseEntity<SolicitacaoResponseDto> atender(@PathVariable Long id) {
+        return ResponseEntity.ok(solicitacaoService.atender(id));
+    }
 }
