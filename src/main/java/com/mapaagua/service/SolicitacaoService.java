@@ -108,6 +108,31 @@ public class SolicitacaoService {
     }
 
     @Transactional
+    public SolicitacaoResponseDto aceitar(Long id) {
+        Usuario usuario = obterUsuarioAutenticado();
+        if (usuario.getPerfil() != PerfilUsuario.ADMINISTRADOR) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Somente administradores podem aceitar solicitações");
+        }
+
+        Solicitacao solicitacao = solicitacaoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Solicitação não encontrada"));
+
+        if (solicitacao.getStatus() != StatusSolicitacao.EM_ANALISE) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "A solicitacao nao esta em analise");
+        }
+
+        solicitacao.setStatus(StatusSolicitacao.ACEITA);
+
+        return toResponseDto(solicitacaoRepository.save(solicitacao));
+    }
+
+    @Transactional
     public SolicitacaoResponseDto assumir(Long id) {
         Usuario usuario = obterUsuarioAutenticado();
         if (usuario.getPerfil() != PerfilUsuario.DISTRIBUIDOR) {
