@@ -23,6 +23,7 @@ const abrirLoginElement = document.getElementById('abrir-login');
 const loginModal = document.getElementById('login-modal');
 const loginForm = document.getElementById('login-form');
 const loginStatusElement = document.getElementById('login-status');
+const cadastrarPontoElement = document.getElementById('cadastrar-ponto');
 const solicitacoesSectionElement = document.getElementById('solicitacoes-section');
 const solicitacoesCopyElement = document.getElementById('solicitacoes-copy');
 const solicitacoesStatusElement = document.getElementById('solicitacoes-status');
@@ -203,8 +204,16 @@ function renderizarAutenticacao() {
     solicitacoesStatusElement.textContent = '';
     authAreaElement.innerHTML = '<button id="abrir-login" class="auth-button" type="button">Entrar</button>';
     authAreaElement.querySelector('#abrir-login').addEventListener('click', abrirLogin);
+    
+    
+    cadastrarPontoElement.hidden = true;
+    abrirSolicitacaoElement.hidden = true;  
     return;
   }
+
+  cadastrarPontoElement.hidden = false;
+  abrirSolicitacaoElement.hidden = usuarioAutenticado.perfil !== 'MORADOR';
+
 
   authAreaElement.innerHTML = `
     <span class="auth-user">
