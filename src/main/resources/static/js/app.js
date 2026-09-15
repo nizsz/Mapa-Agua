@@ -411,7 +411,7 @@ function renderizarSolicitacoesMorador() {
   solicitacoesConteudoElement.innerHTML = solicitacoesApi.length > 0
     ? solicitacoesApi.map(criarCardSolicitacao).join('')
     : '<p class="table-empty">Você ainda não possui solicitações.</p>';
-  ssolicitacoesStatusElement.textContent =
+  solicitacoesStatusElement.textContent =
   `${solicitacoesApi.length} ${solicitacoesApi.length === 1 ? 'solicitação' : 'solicitações'}.`;
 }
 
