@@ -411,7 +411,8 @@ function renderizarSolicitacoesMorador() {
   solicitacoesConteudoElement.innerHTML = solicitacoesApi.length > 0
     ? solicitacoesApi.map(criarCardSolicitacao).join('')
     : '<p class="table-empty">Você ainda não possui solicitações.</p>';
-  solicitacoesStatusElement.textContent = `${solicitacoesApi.length} solicitação${solicitacoesApi.length === 1 ? '' : 'ões'}.`;
+  ssolicitacoesStatusElement.textContent =
+  `${solicitacoesApi.length} ${solicitacoesApi.length === 1 ? 'solicitação' : 'solicitações'}.`;
 }
 
 function renderizarSolicitacoesDistribuidor() {
@@ -431,14 +432,16 @@ function renderizarSolicitacoesDistribuidor() {
       ${minhas.length > 0 ? minhas.map(criarCardSolicitacao).join('') : '<p class="table-empty">Nenhuma solicitação atribuída.</p>'}
     </div>
   `;
-  solicitacoesStatusElement.textContent = `${solicitacoesApi.length} solicitação${solicitacoesApi.length === 1 ? '' : 'ões'} visível${solicitacoesApi.length === 1 ? '' : 'is'}.`;
+  solicitacoesStatusElement.textContent =
+  `${solicitacoesApi.length} ${solicitacoesApi.length === 1 ? 'solicitação' : 'solicitações'}.`;
 }
 
 function renderizarSolicitacoesAdmin() {
   solicitacoesConteudoElement.innerHTML = solicitacoesApi.length > 0
     ? `<div class="solicitacoes-table-wrap"><table class="solicitacoes-table"><thead><tr><th>ID</th><th>Solicitante</th><th>Necessidade</th><th>Urgência</th><th>Endereço</th><th>Status</th><th>Distribuidor</th><th>Data</th><th>Ações</th></tr></thead><tbody>${solicitacoesApi.map(criarLinhaSolicitacaoAdmin).join('')}</tbody></table></div>`
     : '<p class="table-empty">Nenhuma solicitação encontrada.</p>';
-  solicitacoesStatusElement.textContent = `${solicitacoesApi.length} solicitação${solicitacoesApi.length === 1 ? '' : 'ões'} encontrada${solicitacoesApi.length === 1 ? '' : 's'}.`;
+  solicitacoesStatusElement.textContent =
+  `${solicitacoesApi.length} ${solicitacoesApi.length === 1 ? 'solicitação' : 'solicitações'}.`;
 }
 
 function criarCardSolicitacao(solicitacao) {
