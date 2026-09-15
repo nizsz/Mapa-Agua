@@ -23,6 +23,10 @@ const abrirLoginElement = document.getElementById('abrir-login');
 const loginModal = document.getElementById('login-modal');
 const loginForm = document.getElementById('login-form');
 const loginStatusElement = document.getElementById('login-status');
+const abrirCadastroUsuarioElement = document.getElementById('abrir-cadastro-usuario');
+const cadastroUsuarioModal = document.getElementById('cadastro-usuario-modal');
+const cadastroUsuarioForm = document.getElementById('cadastro-usuario-form');
+const cadastroUsuarioStatusElement = document.getElementById('cadastro-usuario-status');
 const cadastrarPontoElement = document.getElementById('cadastrar-ponto');
 const solicitacoesSectionElement = document.getElementById('solicitacoes-section');
 const solicitacoesCopyElement = document.getElementById('solicitacoes-copy');
@@ -108,6 +112,11 @@ document.querySelectorAll('[data-fechar-login]').forEach((elemento) => {
   elemento.addEventListener('click', fecharLogin);
 });
 loginForm.addEventListener('submit', enviarLogin);
+abrirCadastroUsuarioElement.addEventListener('click', abrirCadastroUsuario);
+document.querySelectorAll('[data-fechar-cadastro-usuario]').forEach((elemento) => {
+  elemento.addEventListener('click', fecharCadastroUsuario);
+});
+cadastroUsuarioForm.addEventListener('submit', enviarCadastroUsuario);
 abrirSolicitacaoElement.addEventListener('click', abrirSolicitacao);
 document.querySelectorAll('[data-fechar-solicitacao]').forEach((elemento) => {
   elemento.addEventListener('click', fecharSolicitacao);
@@ -194,6 +203,88 @@ async function enviarLogin(evento) {
     console.error(error);
     loginStatusElement.textContent = error.message || 'Não foi possível entrar. Tente novamente.';
   }
+}
+
+function abrirCadastroUsuario() {
+  fecharLogin();
+  cadastroUsuarioStatusElement.textContent = '';
+  cadastroUsuarioStatusElement.classList.remove('success');
+  cadastroUsuarioModal.hidden = false;
+  cadastroUsuarioForm.elements.nome.focus();
+}
+
+function fecharCadastroUsuario() {
+  cadastroUsuarioModal.hidden = true;
+}
+
+async function enviarCadastroUsuario(evento) {
+  evento.preventDefault();
+  cadastroUsuarioStatusElement.classList.remove('success');
+
+  const dados = new FormData(cadastroUsuarioForm);
+  const nome = dados.get('nome').trim();
+  const email = dados.get('email').trim();
+  const senha = dados.get('senha');
+  const confirmarSenha = dados.get('confirmarSenha');
+
+  const erro = validarCadastroUsuario({ nome, email, senha, confirmarSenha });
+  if (erro) {
+    cadastroUsuarioStatusElement.textContent = erro;
+    return;
+  }
+
+  cadastroUsuarioStatusElement.textContent = 'Criando conta...';
+
+  try {
+    const response = await apiFetch('/api/usuarios', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ nome, email, senha })
+    });
+
+    if (response.status === 409) {
+      cadastroUsuarioStatusElement.textContent = 'Este email já está cadastrado.';
+      return;
+    }
+
+    if (!response.ok) {
+      const mensagem = await obterMensagemErro(response, `Não foi possível criar a conta (${response.status}).`);
+      throw new Error(mensagem);
+    }
+
+    cadastroUsuarioForm.reset();
+    fecharCadastroUsuario();
+    abrirLogin();
+    loginForm.elements.email.value = email;
+    loginStatusElement.classList.add('success');
+    loginStatusElement.textContent = 'Conta criada com sucesso. Entre com seu email e senha.';
+    loginForm.elements.senha.focus();
+  } catch (error) {
+    console.error(error);
+    cadastroUsuarioStatusElement.textContent = error.message || 'Não foi possível criar a conta.';
+  }
+}
+
+function validarCadastroUsuario(payload) {
+  if (!payload.nome) {
+    return 'Nome é obrigatório.';
+  }
+  if (!payload.email) {
+    return 'Email é obrigatório.';
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+    return 'Informe um email válido.';
+  }
+  if (!payload.senha) {
+    return 'Senha é obrigatória.';
+  }
+  if (payload.senha !== payload.confirmarSenha) {
+    return 'A confirmação de senha deve ser igual à senha.';
+  }
+  return '';
 }
 
 function renderizarAutenticacao() {

@@ -60,6 +60,13 @@
                 <button class="secondary-button" type="button" data-fechar-login>Cancelar</button>
                 <button class="primary-button" type="submit">Entrar</button>
               </div>
+
+              <p class="login-register-link">
+                Ainda não possui uma conta?
+                <button class="link-button" type="button" id="abrir-cadastro-usuario">
+                  Criar conta
+                </button>
+              </p>
             </form>
           </section>
         </div>
@@ -204,6 +211,50 @@
     <footer class="footer">
       <div class="container">Mapa da Água · Informações de pontos aprovados</div>
     </footer>
+
+    <div id="cadastro-usuario-modal" class="modal" hidden>
+      <div class="modal-backdrop" data-fechar-cadastro-usuario></div>
+      <section class="modal-card login-card" role="dialog" aria-modal="true" aria-labelledby="cadastro-usuario-title">
+        <div class="modal-header">
+          <div>
+            <p class="section-kicker">Nova conta</p>
+            <h2 id="cadastro-usuario-title">Criar conta</h2>
+          </div>
+          <button class="close-button" type="button" aria-label="Fechar cadastro de conta" data-fechar-cadastro-usuario>&times;</button>
+        </div>
+
+        <p id="cadastro-usuario-status" class="form-status" aria-live="polite"></p>
+
+        <form id="cadastro-usuario-form" novalidate>
+          <div class="login-fields">
+            <label class="field">
+              Nome
+              <input name="nome" type="text" autocomplete="name" required />
+            </label>
+
+            <label class="field">
+              Email
+              <input name="email" type="email" autocomplete="email" required />
+            </label>
+
+            <label class="field">
+              Senha
+              <input name="senha" type="password" autocomplete="new-password" required />
+            </label>
+
+            <label class="field">
+              Confirmar senha
+              <input name="confirmarSenha" type="password" autocomplete="new-password" required />
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button class="secondary-button" type="button" data-fechar-cadastro-usuario>Cancelar</button>
+            <button class="primary-button" type="submit">Criar conta</button>
+          </div>
+        </form>
+      </section>
+    </div>
 
     <div id="cadastro-modal" class="modal" hidden>
       <div class="modal-backdrop" data-fechar-modal></div>

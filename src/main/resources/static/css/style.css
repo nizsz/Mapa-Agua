@@ -995,6 +995,31 @@ main {
   color: var(--success);
 }
 
+.login-register-link {
+  margin: 16px 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.82rem;
+}
+
+.link-button {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:hover,
+.link-button:focus-visible {
+  color: var(--primary-dark);
+}
+
 .required-note {
   margin: 18px 0 0;
   color: var(--muted);
