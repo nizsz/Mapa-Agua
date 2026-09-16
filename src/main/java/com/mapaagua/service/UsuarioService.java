@@ -19,6 +19,7 @@ import java.util.Locale;
 public class UsuarioService {
 
     private static final String USUARIO_NAO_ENCONTRADO = "Usuário não encontrado";
+    private static final List<String> DOMINIOS_EMAIL_PERMITIDOS = List.of("gmail.com", "hotmail.com", "outlook.com");
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
@@ -31,6 +32,7 @@ public class UsuarioService {
     @Transactional
     public UsuarioResponseDto criar(UsuarioCadastroRequestDto requestDto) {
         String email = normalizarEmail(requestDto.email());
+        validarDominioEmail(email);
 
         if (usuarioRepository.existsByEmailIgnoreCase(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email já cadastrado");
@@ -92,6 +94,13 @@ public class UsuarioService {
 
     private String normalizarEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private void validarDominioEmail(String email) {
+        String dominio = email.substring(email.indexOf('@') + 1);
+        if (!DOMINIOS_EMAIL_PERMITIDOS.contains(dominio)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use um email Gmail, Hotmail ou Outlook.");
+        }
     }
 
     private UsuarioResponseDto toResponseDto(Usuario usuario) {

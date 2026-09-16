@@ -63,7 +63,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/pontos").permitAll()
                     .requestMatchers(HttpMethod.PATCH, "/api/pontos/*/status").hasRole("ADMINISTRADOR")
                     .requestMatchers(HttpMethod.PATCH, "/api/usuarios/*/perfil").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/api/pontos").hasAnyRole("MORADOR", "ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/pontos").hasAnyRole("MORADOR", "DISTRIBUIDOR", "ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/pontos/*").hasAnyRole("MORADOR", "DISTRIBUIDOR", "ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/pontos/*").hasAnyRole("MORADOR", "DISTRIBUIDOR", "ADMINISTRADOR")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

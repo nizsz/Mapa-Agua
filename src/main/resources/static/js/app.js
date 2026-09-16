@@ -145,6 +145,8 @@ dashboardBuscaElement.addEventListener('input', () => {
 dashboardStatusElement.addEventListener('change', renderizarDashboard);
 dashboardLimparElement.addEventListener('click', limparFiltrosDashboard);
 dashboardTabelaElement.addEventListener('click', tratarAcaoDashboard);
+dashboardTabelaElement.addEventListener('click', tratarExclusaoPonto);
+map.getContainer().addEventListener('click', tratarExclusaoPonto);
 solicitacoesConteudoElement.addEventListener('click', tratarAcaoSolicitacao);
 usuariosTabelaElement.addEventListener('click', tratarAcaoUsuario);
 
@@ -204,6 +206,8 @@ async function enviarLogin(evento) {
     loginForm.reset();
     fecharLogin();
     renderizarAutenticacao();
+    renderizarDashboard();
+    aplicarFiltros();
     await carregarSolicitacoes();
     await carregarUsuarios();
   } catch (error) {
@@ -275,6 +279,13 @@ async function enviarCadastroUsuario(evento) {
   }
 }
 
+const dominiosEmailPermitidos = ['gmail.com', 'hotmail.com', 'outlook.com'];
+
+function possuiDominioEmailPermitido(email) {
+  const dominio = String(email).split('@')[1] || '';
+  return dominiosEmailPermitidos.includes(dominio.toLocaleLowerCase('pt-BR'));
+}
+
 function validarCadastroUsuario(payload) {
   if (!payload.nome) {
     return 'Nome é obrigatório.';
@@ -284,6 +295,9 @@ function validarCadastroUsuario(payload) {
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
     return 'Informe um email válido.';
+  }
+  if (!possuiDominioEmailPermitido(payload.email)) {
+    return 'Use um email Gmail, Hotmail ou Outlook.';
   }
   if (!payload.senha) {
     return 'Senha é obrigatória.';
@@ -332,6 +346,8 @@ function renderizarAutenticacao() {
     solicitacoesApi = [];
     usuariosApi = [];
     renderizarAutenticacao();
+    renderizarDashboard();
+    aplicarFiltros();
   });
 }
 
@@ -363,6 +379,8 @@ async function restaurarSessao() {
       perfil: usuario.perfil
     };
     renderizarAutenticacao();
+    renderizarDashboard();
+    aplicarFiltros();
     await carregarSolicitacoes();
     await carregarUsuarios();
   } catch (error) {
@@ -991,11 +1009,18 @@ function renderizarDashboard() {
 function criarLinhaDashboard(ponto) {
   const status = ponto.statusAprovacao || 'NÃO INFORMADO';
   const classeStatus = status.toLocaleLowerCase('pt-BR');
-  const acoes = status === 'PENDENTE'
+  const podeAprovarOuRejeitar = Boolean(usuarioAutenticado) && usuarioAutenticado.perfil === 'ADMINISTRADOR';
+  const botoesStatus = status === 'PENDENTE' && podeAprovarOuRejeitar
     ? `
-        <div class="dashboard-actions">
           <button class="dashboard-action approve" type="button" data-acao="aprovar" data-ponto-id="${escaparHtml(ponto.id)}">Aprovar</button>
           <button class="dashboard-action reject" type="button" data-acao="rejeitar" data-ponto-id="${escaparHtml(ponto.id)}">Rejeitar</button>
+      `
+    : '';
+  const botaoExcluir = criarBotaoExcluirPonto(ponto);
+  const acoes = botoesStatus || botaoExcluir
+    ? `
+        <div class="dashboard-actions">
+          ${botoesStatus}${botaoExcluir}
         </div>
       `
     : '';
@@ -1070,6 +1095,72 @@ function limparFiltrosDashboard() {
   dashboardBuscaElement.value = '';
   dashboardStatusElement.value = 'TODOS';
   renderizarDashboard();
+}
+
+function podeExcluirPonto(ponto) {
+  if (!usuarioAutenticado) {
+    return false;
+  }
+  if (usuarioAutenticado.perfil === 'ADMINISTRADOR') {
+    return true;
+  }
+  if (usuarioAutenticado.perfil === 'MORADOR' || usuarioAutenticado.perfil === 'DISTRIBUIDOR') {
+    return ponto.usuarioId === usuarioAutenticado.id;
+  }
+  return false;
+}
+
+function criarBotaoExcluirPonto(ponto) {
+  if (!podeExcluirPonto(ponto)) {
+    return '';
+  }
+  return `<button class="dashboard-action reject" type="button" data-acao-ponto="excluir" data-ponto-id="${escaparHtml(ponto.id)}">Excluir</button>`;
+}
+
+async function tratarExclusaoPonto(evento) {
+  const botao = evento.target.closest('[data-acao-ponto="excluir"][data-ponto-id]');
+  if (!botao) {
+    return;
+  }
+
+  await excluirPonto(botao.dataset.pontoId, botao);
+}
+
+async function excluirPonto(pontoId, botao) {
+  if (pontosEmAtualizacao.has(pontoId) || !window.confirm('Deseja realmente excluir este ponto de água? Esta ação não pode ser desfeita.')) {
+    return;
+  }
+
+  pontosEmAtualizacao.add(pontoId);
+  if (botao) {
+    botao.disabled = true;
+  }
+  dashboardMensagemElement.textContent = 'Excluindo ponto de água...';
+
+  try {
+    const response = await apiFetch(`${apiUrl}/${encodeURIComponent(pontoId)}`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const mensagem = await obterMensagemErro(response, `Não foi possível excluir o ponto de água (${response.status}).`);
+      throw new Error(mensagem);
+    }
+
+    dashboardMensagemElement.textContent = 'Ponto de água excluído com sucesso.';
+    await carregarPontos();
+  } catch (error) {
+    console.error(error);
+    dashboardMensagemElement.textContent = error.message || 'Não foi possível excluir o ponto de água.';
+    if (botao) {
+      botao.disabled = false;
+    }
+  } finally {
+    pontosEmAtualizacao.delete(pontoId);
+  }
 }
 
 function formatarDataCadastro(valor) {
@@ -1151,6 +1242,7 @@ function adicionarMarcador(ponto) {
 }
 
 function criarPopup(ponto) {
+  const botaoExcluir = criarBotaoExcluirPonto(ponto);
   return `
     <div class="popup-content">
       <h3>${escaparHtml(ponto.nome || 'Ponto sem nome')}</h3>
@@ -1159,6 +1251,7 @@ function criarPopup(ponto) {
       <p><strong>Horário:</strong> ${formatarHorario(ponto.horarioInicio)} - ${formatarHorario(ponto.horarioFim)}</p>
       <p><strong>Disponibilidade:</strong> ${escaparHtml(ponto.disponibilidade || 'Não informado')}</p>
       <p><strong>Observação:</strong> ${escaparHtml(ponto.observacao || 'Nenhuma observação')}</p>
+      ${botaoExcluir ? `<div>${botaoExcluir}</div>` : ''}
     </div>
   `;
 }

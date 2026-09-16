@@ -73,6 +73,13 @@ public class PontoAguaService {
 
     @Transactional
     public PontoAguaResponseDto atualizarStatus(Long id, StatusAprovacaoPonto novoStatus) {
+        Usuario usuarioAutenticado = obterUsuarioAutenticado();
+        if (usuarioAutenticado.getPerfil() != PerfilUsuario.ADMINISTRADOR) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Usuário não possui permissão para aprovar ou rejeitar pontos de água");
+        }
+
         PontoAgua pontoAgua = buscarEntidadePorId(id);
         StatusAprovacaoPonto statusAtual = pontoAgua.getStatusAprovacao();
 
@@ -107,7 +114,8 @@ public class PontoAguaService {
             return;
         }
 
-        if (usuarioAutenticado.getPerfil() == PerfilUsuario.MORADOR
+        if ((usuarioAutenticado.getPerfil() == PerfilUsuario.MORADOR
+                || usuarioAutenticado.getPerfil() == PerfilUsuario.DISTRIBUIDOR)
                 && pontoAgua.getUsuario().getId().equals(usuarioAutenticado.getId())) {
             return;
         }
