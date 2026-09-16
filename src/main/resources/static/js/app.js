@@ -36,6 +36,9 @@ const abrirSolicitacaoElement = document.getElementById('abrir-solicitacao');
 const solicitacaoModal = document.getElementById('solicitacao-modal');
 const solicitacaoForm = document.getElementById('solicitacao-form');
 const solicitacaoFormStatusElement = document.getElementById('solicitacao-form-status');
+const usuariosSectionElement = document.getElementById('usuarios-section');
+const usuariosStatusMensagemElement = document.getElementById('usuarios-status-mensagem');
+const usuariosTabelaElement = document.getElementById('usuarios-tabela');
 const saoPauloCenter = [-23.5505, -46.6333];
 const map = L.map('map').setView(saoPauloCenter, 11);
 const markerLayer = L.layerGroup().addTo(map);
@@ -46,6 +49,8 @@ const pontosEmAtualizacao = new Set();
 let usuarioAutenticado = null;
 let solicitacoesApi = [];
 const solicitacoesEmAtualizacao = new Set();
+let usuariosApi = [];
+const usuariosEmAtualizacao = new Set();
 
 function lerCookie(nome) {
   const cookies = document.cookie ? document.cookie.split(';') : [];
@@ -141,6 +146,7 @@ dashboardStatusElement.addEventListener('change', renderizarDashboard);
 dashboardLimparElement.addEventListener('click', limparFiltrosDashboard);
 dashboardTabelaElement.addEventListener('click', tratarAcaoDashboard);
 solicitacoesConteudoElement.addEventListener('click', tratarAcaoSolicitacao);
+usuariosTabelaElement.addEventListener('click', tratarAcaoUsuario);
 
 function abrirLogin() {
   loginStatusElement.textContent = '';
@@ -199,6 +205,7 @@ async function enviarLogin(evento) {
     fecharLogin();
     renderizarAutenticacao();
     await carregarSolicitacoes();
+    await carregarUsuarios();
   } catch (error) {
     console.error(error);
     loginStatusElement.textContent = error.message || 'Não foi possível entrar. Tente novamente.';
@@ -293,6 +300,10 @@ function renderizarAutenticacao() {
     solicitacoesSectionElement.hidden = true;
     solicitacoesConteudoElement.innerHTML = '';
     solicitacoesStatusElement.textContent = '';
+    usuariosApi = [];
+    usuariosSectionElement.hidden = true;
+    usuariosTabelaElement.innerHTML = '';
+    usuariosStatusMensagemElement.textContent = '';
     authAreaElement.innerHTML = '<button id="abrir-login" class="auth-button" type="button">Entrar</button>';
     authAreaElement.querySelector('#abrir-login').addEventListener('click', abrirLogin);
     
@@ -304,6 +315,7 @@ function renderizarAutenticacao() {
 
   cadastrarPontoElement.hidden = false;
   abrirSolicitacaoElement.hidden = usuarioAutenticado.perfil !== 'MORADOR';
+  usuariosSectionElement.hidden = usuarioAutenticado.perfil !== 'ADMINISTRADOR';
 
 
   authAreaElement.innerHTML = `
@@ -318,6 +330,7 @@ function renderizarAutenticacao() {
   authAreaElement.querySelector('#sair-visual').addEventListener('click', () => {
     usuarioAutenticado = null;
     solicitacoesApi = [];
+    usuariosApi = [];
     renderizarAutenticacao();
   });
 }
@@ -351,6 +364,7 @@ async function restaurarSessao() {
     };
     renderizarAutenticacao();
     await carregarSolicitacoes();
+    await carregarUsuarios();
   } catch (error) {
     console.error(error);
     usuarioAutenticado = null;
@@ -662,6 +676,133 @@ function executarAcaoSolicitacao(acao, id) {
     method: endpoint.method,
     headers: { 'Accept': 'application/json' }
   });
+}
+
+async function carregarUsuarios() {
+  if (!usuarioAutenticado || usuarioAutenticado.perfil !== 'ADMINISTRADOR') {
+    return;
+  }
+
+  usuariosStatusMensagemElement.textContent = 'Carregando usuários...';
+
+  try {
+    const response = await apiFetch('/api/usuarios', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      usuariosApi = [];
+      usuariosTabelaElement.innerHTML = '';
+      usuariosStatusMensagemElement.textContent = 'Você não possui permissão para visualizar os usuários.';
+      return;
+    }
+
+    if (!response.ok) {
+      const mensagem = await obterMensagemErro(response, `Não foi possível carregar os usuários (${response.status}).`);
+      throw new Error(mensagem);
+    }
+
+    const usuarios = await response.json();
+    usuariosApi = Array.isArray(usuarios) ? usuarios : [];
+    renderizarUsuarios();
+  } catch (error) {
+    console.error(error);
+    usuariosApi = [];
+    usuariosTabelaElement.innerHTML = '';
+    usuariosStatusMensagemElement.textContent = error.message || 'Não foi possível carregar os usuários.';
+  }
+}
+
+function renderizarUsuarios() {
+  usuariosTabelaElement.innerHTML = usuariosApi.length > 0
+    ? usuariosApi.map(criarLinhaUsuario).join('')
+    : '<tr><td class="table-empty" colspan="5">Nenhum usuário encontrado.</td></tr>';
+
+  usuariosStatusMensagemElement.textContent = usuariosApi.length > 0
+    ? `${usuariosApi.length} usuário${usuariosApi.length === 1 ? '' : 's'} encontrado${usuariosApi.length === 1 ? '' : 's'}.`
+    : 'Nenhum usuário encontrado.';
+}
+
+function criarLinhaUsuario(usuario) {
+  const perfil = usuario.perfil || 'NÃO INFORMADO';
+  const ativo = usuario.ativo !== false;
+
+  return `
+    <tr data-usuario-id="${escaparHtml(usuario.id)}">
+      <td data-label="Nome">${escaparHtml(usuario.nome || 'Sem nome')}</td>
+      <td data-label="Email">${escaparHtml(usuario.email || 'Não informado')}</td>
+      <td data-label="Perfil"><span class="status-pill">${escaparHtml(perfil)}</span></td>
+      <td data-label="Status">${
+        ativo
+          ? '<span class="status-pill aprovado">Ativo</span>'
+          : '<span class="status-pill rejeitado">Inativo</span>'
+      }</td>
+      <td data-label="Ações">${criarAcaoUsuario(usuario, perfil)}</td>
+    </tr>
+  `;
+}
+
+function criarAcaoUsuario(usuario, perfil) {
+  if (perfil === 'MORADOR') {
+    return `<button class="dashboard-action approve" type="button" data-acao-usuario="promover" data-usuario-id="${escaparHtml(usuario.id)}">Promover para distribuidor</button>`;
+  }
+  if (perfil === 'DISTRIBUIDOR') {
+    return `<button class="dashboard-action reject" type="button" data-acao-usuario="rebaixar" data-usuario-id="${escaparHtml(usuario.id)}">Tornar morador</button>`;
+  }
+  return '';
+}
+
+async function tratarAcaoUsuario(evento) {
+  const botao = evento.target.closest('[data-acao-usuario][data-usuario-id]');
+  if (!botao || !usuariosTabelaElement.contains(botao)) {
+    return;
+  }
+
+  const usuarioId = botao.dataset.usuarioId;
+  const acao = botao.dataset.acaoUsuario;
+  const novoPerfil = acao === 'promover' ? 'DISTRIBUIDOR' : 'MORADOR';
+
+  if (usuariosEmAtualizacao.has(usuarioId)) {
+    return;
+  }
+
+  const linha = botao.closest('tr');
+  const botoesDaLinha = linha ? linha.querySelectorAll('[data-acao-usuario]') : [botao];
+  usuariosEmAtualizacao.add(usuarioId);
+  botoesDaLinha.forEach((elemento) => {
+    elemento.disabled = true;
+  });
+  usuariosStatusMensagemElement.textContent = 'Atualizando perfil do usuário...';
+
+  try {
+    const response = await apiFetch(`/api/usuarios/${encodeURIComponent(usuarioId)}/perfil`, {
+      method: 'PATCH',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ perfil: novoPerfil })
+    });
+
+    if (!response.ok) {
+      const mensagem = await obterMensagemErro(response, `Não foi possível atualizar o perfil do usuário (${response.status}).`);
+      throw new Error(mensagem);
+    }
+
+    await carregarUsuarios();
+    usuariosStatusMensagemElement.textContent = novoPerfil === 'DISTRIBUIDOR'
+      ? 'Usuário promovido para distribuidor com sucesso.'
+      : 'Usuário atualizado para morador com sucesso.';
+  } catch (error) {
+    console.error(error);
+    usuariosStatusMensagemElement.textContent = error.message || 'Não foi possível atualizar o perfil do usuário.';
+    botoesDaLinha.forEach((elemento) => {
+      elemento.disabled = false;
+    });
+  } finally {
+    usuariosEmAtualizacao.delete(usuarioId);
+  }
 }
 
 function abrirCadastro() {

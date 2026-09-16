@@ -194,6 +194,32 @@
         </div>
       </section>
 
+      <section id="usuarios-section" class="dashboard-panel" aria-labelledby="usuarios-title" hidden>
+        <div class="dashboard-heading">
+          <div>
+            <p class="section-kicker">Área administrativa</p>
+            <h2 id="usuarios-title">Usuários</h2>
+            <p class="dashboard-copy">Gerencie os perfis dos usuários cadastrados na plataforma.</p>
+          </div>
+        </div>
+
+        <div id="usuarios-status-mensagem" class="dashboard-status-message" aria-live="polite"></div>
+        <div class="table-wrap">
+          <table class="points-table">
+            <thead>
+              <tr>
+                <th scope="col">Nome</th>
+                <th scope="col">Email</th>
+                <th scope="col">Perfil</th>
+                <th scope="col">Status</th>
+                <th scope="col">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="usuarios-tabela"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section id="solicitacoes-section" class="solicitacoes-panel" aria-labelledby="solicitacoes-title" hidden>
         <div class="solicitacoes-heading">
           <div>
